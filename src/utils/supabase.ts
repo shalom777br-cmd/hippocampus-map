@@ -957,35 +957,86 @@ class CloudSupabaseService {
     const runPull = async () => {
       // 1. Always prefer the Server-side secure API utilizing Service Role to avoid direct client-side selection discrepancies
       try {
-        const response = await apiFetch(`/api/cloud?action=sync-pull&userId=${this.activeUser!.id}`);
-        if (response.ok) {
+        let allLogs: TimelineLog[] = [];
+        let allBooks: BoundBook[] = [];
+        let lastSettings: AppSettings | null = null;
+        let allReviews: ReviewResult[] = [];
+        let offset = 0;
+        const limit = 50;
+        let hasMore = true;
+
+        while (hasMore) {
+          const response = await apiFetch(`/api/cloud?action=sync-pull&userId=${this.activeUser!.id}&limit=${limit}&offset=${offset}`, undefined, 12000);
+          if (!response.ok) {
+            throw new Error(`Cloud sync-pull API status ${response.status}`);
+          }
           const data = await response.json();
-          return {
-            logs: data.logs || [],
-            books: data.books || [],
-            settings: data.settings || null,
-            reviews: data.reviews || []
-          };
+          if (data.logs && data.logs.length > 0) {
+            allLogs = allLogs.concat(data.logs);
+          }
+          if (data.books && data.books.length > 0) {
+            allBooks = allBooks.concat(data.books);
+          }
+          if (data.settings) {
+            lastSettings = data.settings;
+          }
+          if (data.reviews && data.reviews.length > 0) {
+            allReviews = allReviews.concat(data.reviews);
+          }
+
+          if (typeof data.hasMore === "boolean") {
+            hasMore = data.hasMore;
+          } else {
+            hasMore = (data.logs?.length || 0) >= limit;
+          }
+
+          offset += limit;
+          if (offset > 5000) break; // Safety limit
         }
+
+        return {
+          logs: allLogs,
+          books: allBooks,
+          settings: lastSettings,
+          reviews: allReviews
+        };
       } catch (err) {
         console.warn("Server-side sync-pull API failed, trying direct query fallback:", err);
       }
 
-      // 2. Direct client-side fallback query
+      // 2. Direct client-side fallback query with range pagination
       if (isRealSupabaseConfigured && realSupabase) {
         try {
           const userId = this.activeUser!.id;
+          let allRows: any[] = [];
+          let offset = 0;
+          const limit = 50;
+          let hasMore = true;
 
-          const { data: rows, error } = await Promise.race([
-            realSupabase
-              .from("hippocampus_logs")
-              .select("*")
-              .eq("user_id", userId),
-            new Promise<any>((_, reject) => setTimeout(() => reject(new Error("Supabase DB pull timed out")), 2500))
-          ]);
+          while (hasMore) {
+            const { data: rows, error } = await Promise.race([
+              realSupabase
+                .from("hippocampus_logs")
+                .select("*")
+                .eq("user_id", userId)
+                .order("created_at", { ascending: true })
+                .range(offset, offset + limit - 1),
+              new Promise<any>((_, reject) => setTimeout(() => reject(new Error("Supabase DB pull timed out")), 8000))
+            ]);
 
-          if (error) {
-            throw error;
+            if (error) {
+              throw error;
+            }
+
+            if (rows && rows.length > 0) {
+              allRows = allRows.concat(rows);
+              hasMore = rows.length === limit;
+            } else {
+              hasMore = false;
+            }
+
+            offset += limit;
+            if (offset > 5000) break; // Safety limit
           }
 
           const logs: TimelineLog[] = [];
@@ -993,8 +1044,8 @@ class CloudSupabaseService {
           let settings: AppSettings | null = null;
           const reviews: ReviewResult[] = [];
 
-          if (rows && rows.length > 0) {
-            for (const row of rows) {
+          if (allRows && allRows.length > 0) {
+            for (const row of allRows) {
               try {
                 if (row.entry_type === "book") {
                   books.push(JSON.parse(row.content));

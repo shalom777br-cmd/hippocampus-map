@@ -722,29 +722,55 @@ app.post("/api/auth/delete-account", async (req, res) => {
 });
 
 // Cloud Sync Pull
-app.get("/api/cloud/sync-pull", async (req, res) => {
+app.get(["/api/cloud", "/api/cloud/sync-pull"], async (req, res) => {
   try {
-    const { userId } = req.query;
+    const { userId, limit: limitStr, offset: offsetStr } = req.query;
     if (!userId || typeof userId !== "string") {
       res.status(400).json({ message: "ユーザーIDが必要です。" });
       return;
     }
 
     let rows: any[] = [];
+    let hasMore = false;
 
     if (supabase) {
-      const { data, error } = await supabase
+      let query = supabase
         .from("hippocampus_logs")
         .select("*")
-        .eq("user_id", userId);
+        .eq("user_id", userId)
+        .order("created_at", { ascending: true });
 
+      let limit: number | null = null;
+      let offset: number | null = null;
+      if (limitStr !== undefined && offsetStr !== undefined) {
+        limit = parseInt(limitStr as string, 10);
+        offset = parseInt(offsetStr as string, 10);
+        if (!isNaN(limit) && !isNaN(offset)) {
+          query = query.range(offset, offset + limit - 1);
+        }
+      }
+
+      const { data, error } = await query;
       if (error) {
         throw error;
       }
       rows = data || [];
+      hasMore = limit !== null && rows ? rows.length === limit : false;
     } else {
       const db = getSandboxDb();
-      rows = db.logs.filter(l => l.user_id === userId);
+      const allRows = db.logs.filter(l => l.user_id === userId);
+      let limit: number | null = null;
+      let offset: number | null = null;
+      if (limitStr !== undefined && offsetStr !== undefined) {
+        limit = parseInt(limitStr as string, 10);
+        offset = parseInt(offsetStr as string, 10);
+      }
+      if (limit !== null && offset !== null && !isNaN(limit) && !isNaN(offset)) {
+        rows = allRows.slice(offset, offset + limit);
+        hasMore = offset + limit < allRows.length;
+      } else {
+        rows = allRows;
+      }
     }
 
     const logs: any[] = [];
@@ -774,7 +800,7 @@ app.get("/api/cloud/sync-pull", async (req, res) => {
       }
     }
 
-    res.json({ logs, books, settings, reviews });
+    res.json({ logs, books, settings, reviews, hasMore });
   } catch (err: any) {
     console.error("Error in /api/cloud/sync-pull:", err);
     res.status(500).json({ message: `サーバーエラーが発生しました: ${err.message}` });
@@ -782,7 +808,7 @@ app.get("/api/cloud/sync-pull", async (req, res) => {
 });
 
 // Cloud Sync Push
-app.post("/api/cloud/sync-push", async (req, res) => {
+app.post(["/api/cloud", "/api/cloud/sync-push"], async (req, res) => {
   try {
     const { userId, logs, books, settings, reviews } = req.body;
     if (!userId) {

@@ -82,10 +82,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           return;
         }
 
-        const { data: rows, error } = await (supabase as any)
+        const limitStr = req.query.limit || req.body?.limit;
+        const offsetStr = req.query.offset || req.body?.offset;
+
+        let query = (supabase as any)
           .from("hippocampus_logs")
           .select("*")
-          .eq("user_id", userId);
+          .eq("user_id", userId)
+          .order("created_at", { ascending: true });
+
+        let limit: number | null = null;
+        let offset: number | null = null;
+        if (limitStr !== undefined && offsetStr !== undefined) {
+          limit = parseInt(limitStr as string, 10);
+          offset = parseInt(offsetStr as string, 10);
+          if (!isNaN(limit) && !isNaN(offset)) {
+            query = query.range(offset, offset + limit - 1);
+          }
+        }
+
+        const { data: rows, error } = await query;
 
         if (error) {
           throw error;
@@ -118,7 +134,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           }
         }
 
-        res.status(200).json({ logs, books, settings, reviews });
+        const hasMore = limit !== null && rows ? rows.length === limit : false;
+
+        res.status(200).json({ logs, books, settings, reviews, hasMore });
         break;
       }
 
