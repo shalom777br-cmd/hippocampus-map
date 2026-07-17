@@ -45,6 +45,7 @@ export interface AiGeneratedData {
 export interface TimelineLog {
   id: string;
   userId?: string;                     // for Supabase synchronization
+  entryType?: string;                  // added to preserve "timeline_import", "received_memory", etc.
   original: OriginalData;              // 原本データ
   aiData?: AiGeneratedData;            // AI生成データ (いつでも再生成可能な設計)
   createdTime: number;                 // created timestamp

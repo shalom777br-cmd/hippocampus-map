@@ -65,6 +65,7 @@ function normalizeRowToTimelineLog(row: any): any {
   return {
     id: parsed.id || row.id || `log-${row.id || Math.random().toString(36).substr(2, 9)}`,
     userId: row.user_id,
+    entryType: row.entry_type || "log",
     original,
     aiData,
     createdTime: parsed.createdTime || new Date(original.datetime).getTime() || Date.now()
@@ -760,8 +761,8 @@ app.get("/api/cloud/sync-pull", async (req, res) => {
             settings = JSON.parse(row.content);
           } else if (row.entry_type === "review") {
             reviews.push(JSON.parse(row.content));
-          } else {
-            // Treat everything else as log and normalize it robustly
+          } else if (row.entry_type === "log" || row.entry_type === "timeline_import" || row.entry_type === "received_memory") {
+            // Treat as log and normalize it robustly
             const normalized = normalizeRowToTimelineLog(row);
             if (normalized) {
               logs.push(normalized);
@@ -797,7 +798,7 @@ app.post("/api/cloud/sync-push", async (req, res) => {
       for (const log of logs) {
         rowsToInsert.push({
           user_id: userId,
-          entry_type: "log",
+          entry_type: log.entryType || "log",
           content: JSON.stringify(log),
           received_from: log.receivedFrom || "app",
           occurred_at: log.original?.datetime || new Date().toISOString()
@@ -848,7 +849,8 @@ app.post("/api/cloud/sync-push", async (req, res) => {
       const { error: deleteError } = await supabase
         .from("hippocampus_logs")
         .delete()
-        .eq("user_id", userId);
+        .eq("user_id", userId)
+        .in("entry_type", ["log", "timeline_import", "received_memory", "book", "settings", "review"]);
 
       if (deleteError) {
         throw deleteError;
