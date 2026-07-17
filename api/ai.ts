@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { handleCors } from "./_lib/cors";
-import { getGeminiClient } from "./_lib/gemini";
+import { handleCors } from "./_lib/cors.js";
+import { getGeminiClient } from "./_lib/gemini.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (handleCors(req, res)) return;

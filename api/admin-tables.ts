@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { handleCors } from "./_lib/cors";
-import { getSupabaseClient } from "./_lib/supabase";
-import { ADMIN_TABLES_METADATA, filterTableColumns } from "./admin/_metadata";
+import { handleCors } from "./_lib/cors.js";
+import { getSupabaseClient } from "./_lib/supabase.js";
+import { ADMIN_TABLES_METADATA, filterTableColumns } from "./admin/_metadata.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (handleCors(req, res)) return;
