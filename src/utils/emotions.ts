@@ -1,0 +1,91 @@
+// Detailed emotion and physical sensation labels
+export interface EmotionItem {
+  code: string;
+  number: string; // Empty or stripped
+  name: string;
+  color: string; // Tailwind class background
+  borderColor: string; // Tailwind class border
+  textColor: string; // Tailwind class text
+  category: "positive" | "sad" | "angry" | "anxious" | "physical" | "neutral";
+  categoryLabel: string;
+}
+
+export const DETAILED_EMOTIONS: EmotionItem[] = [
+  { code: "1", number: "", name: "嬉しい、やったー", color: "bg-emerald-50 hover:bg-emerald-100", borderColor: "border-emerald-300", textColor: "text-emerald-900", category: "positive", categoryLabel: "喜び・嬉しさ" },
+  { code: "2", number: "", name: "幸せだ", color: "bg-teal-50 hover:bg-teal-100", borderColor: "border-teal-300", textColor: "text-teal-900", category: "positive", categoryLabel: "喜び・嬉しさ" },
+  { code: "3", number: "", name: "悲しい", color: "bg-blue-50 hover:bg-blue-100", borderColor: "border-blue-300", textColor: "text-blue-900", category: "sad", categoryLabel: "悲しみ・寂しさ" },
+  { code: "4", number: "", name: "切ない", color: "bg-sky-50 hover:bg-sky-100", borderColor: "border-sky-300", textColor: "text-sky-900", category: "sad", categoryLabel: "悲しみ・寂しさ" },
+  { code: "5", number: "", name: "楽しい", color: "bg-emerald-50 hover:bg-emerald-100", borderColor: "border-emerald-300", textColor: "text-emerald-950", category: "positive", categoryLabel: "喜び・嬉しさ" },
+  { code: "6", number: "", name: "面白い", color: "bg-lime-50 hover:bg-lime-100", borderColor: "border-lime-300", textColor: "text-lime-900", category: "positive", categoryLabel: "喜び・嬉しさ" },
+  { code: "7", number: "", name: "イラ立つ、神経逆立つ", color: "bg-red-50 hover:bg-red-100", borderColor: "border-red-300", textColor: "text-red-900", category: "angry", categoryLabel: "怒り・不快" },
+  { code: "8", number: "", name: "驚く", color: "bg-amber-50 hover:bg-amber-100", borderColor: "border-amber-300", textColor: "text-amber-900", category: "anxious", categoryLabel: "驚き・混乱" },
+  { code: "9", number: "", name: "感動する", color: "bg-rose-50 hover:bg-rose-100", borderColor: "border-rose-300", textColor: "text-rose-900", category: "positive", categoryLabel: "喜び・嬉しさ" },
+  { code: "10", number: "", name: "恥ずかしい", color: "bg-yellow-50 hover:bg-yellow-100", borderColor: "border-yellow-300", textColor: "text-yellow-905", category: "anxious", categoryLabel: "不安心理" },
+  { code: "11", number: "", name: "光栄だ", color: "bg-cyan-50 hover:bg-cyan-100", borderColor: "border-cyan-300", textColor: "text-cyan-900", category: "positive", categoryLabel: "喜び・嬉しさ" },
+  { code: "12", number: "", name: "もったいない", color: "bg-stone-100 hover:bg-stone-200", borderColor: "border-stone-300", textColor: "text-stone-800", category: "neutral", categoryLabel: "その他・中立" },
+  { code: "13", number: "", name: "かわいい", color: "bg-pink-50 hover:bg-pink-100", borderColor: "border-pink-300", textColor: "text-pink-900", category: "positive", categoryLabel: "喜び・嬉しさ" },
+  { code: "14", number: "", name: "面倒くさい。おっくうだ", color: "bg-zinc-100 hover:bg-zinc-200", borderColor: "border-zinc-300", textColor: "text-zinc-800", category: "neutral", categoryLabel: "その他・中立" },
+  { code: "15", number: "", name: "興味ない", color: "bg-slate-100 hover:bg-slate-200", borderColor: "border-slate-300", textColor: "text-slate-800", category: "neutral", categoryLabel: "その他・中立" },
+  { code: "16", number: "", name: "退屈だ", color: "bg-slate-50 hover:bg-slate-100", borderColor: "border-slate-300", textColor: "text-slate-705", category: "neutral", categoryLabel: "その他・中立" },
+  { code: "17", number: "", name: "困るなぁ、どうやって解決しようか悩む", color: "bg-purple-50 hover:bg-purple-100", borderColor: "border-purple-300", textColor: "text-purple-900", category: "anxious", categoryLabel: "不安心理" },
+  { code: "18", number: "", name: "かっこいい、美しい", color: "bg-indigo-50 hover:bg-indigo-100", borderColor: "border-indigo-300", textColor: "text-indigo-900", category: "positive", categoryLabel: "喜び・嬉しさ" },
+  { code: "19", number: "", name: "がっかり、期待はずれ", color: "bg-zinc-100 hover:bg-zinc-200", borderColor: "border-zinc-400", textColor: "text-zinc-700", category: "sad", categoryLabel: "悲しみ・寂しさ" },
+  { code: "20", number: "", name: "心地良い、安心する", color: "bg-teal-50 hover:bg-teal-100", borderColor: "border-teal-300", textColor: "text-teal-900", category: "positive", categoryLabel: "喜び・嬉しさ" },
+  { code: "21", number: "", name: "懐かしい", color: "bg-amber-50 hover:bg-amber-100", borderColor: "border-amber-300", textColor: "text-amber-900", category: "positive", categoryLabel: "喜び・嬉しさ" },
+  { code: "22", number: "", name: "好きだ", color: "bg-pink-50 hover:bg-pink-100", borderColor: "border-pink-300", textColor: "text-pink-900", category: "positive", categoryLabel: "喜び・嬉しさ" },
+  { code: "23", number: "", name: "嫌な感じ　嫌悪感　嫌いだ", color: "bg-rose-50 hover:bg-rose-100", borderColor: "border-rose-300", textColor: "text-rose-900", category: "angry", categoryLabel: "怒り・不快" },
+  { code: "24", number: "", name: "申し訳ない", color: "bg-stone-50 hover:bg-stone-100", borderColor: "border-[#D6CFC7]", textColor: "text-stone-700", category: "sad", categoryLabel: "悲しみ・寂しさ" },
+  { code: "25", number: "", name: "悔しい", color: "bg-red-50 hover:bg-red-100", borderColor: "border-red-350", textColor: "text-red-900", category: "angry", categoryLabel: "怒り・不快" },
+  { code: "26", number: "", name: "不安だ", color: "bg-indigo-50 hover:bg-indigo-100", borderColor: "border-indigo-350", textColor: "text-indigo-900", category: "anxious", categoryLabel: "不安心理" },
+  { code: "27", number: "", name: "さびしい", color: "bg-blue-50 hover:bg-blue-100", borderColor: "border-blue-300", textColor: "text-blue-905", category: "sad", categoryLabel: "悲しみ・寂しさ" },
+  { code: "28", number: "", name: "気味が悪い　ものものしい　例) 神社寺墓", color: "bg-violet-50 hover:bg-violet-100", borderColor: "border-violet-300", textColor: "text-violet-900", category: "anxious", categoryLabel: "不安心理" },
+  { code: "29", number: "", name: "怖い", color: "bg-violet-50 hover:bg-violet-100", borderColor: "border-violet-300", textColor: "text-violet-900", category: "anxious", categoryLabel: "不安心理" },
+  { code: "30", number: "", name: "ぞっとする　背筋がゾワっとする/背筋が凍る", color: "bg-violet-50 hover:bg-violet-100", borderColor: "border-violet-300", textColor: "text-violet-905", category: "anxious", categoryLabel: "不安心理" },
+  { code: "31", number: "", name: "親しみ、良く知っている感覚", color: "bg-teal-50 hover:bg-teal-100", borderColor: "border-teal-300", textColor: "text-teal-900", category: "positive", categoryLabel: "喜び・嬉しさ" },
+  { code: "32", number: "", name: "よそよそしい、疎外感、知らない場所に来た感覚", color: "bg-slate-50 hover:bg-slate-100", borderColor: "border-slate-350", textColor: "text-slate-800", category: "anxious", categoryLabel: "不安心理" },
+  { code: "33", number: "", name: "空腹だ", color: "bg-orange-50 hover:bg-orange-100", borderColor: "border-orange-300", textColor: "text-orange-900", category: "physical", categoryLabel: "身体感覚・生理的" },
+  { code: "34", number: "", name: "喉が渇いた", color: "bg-orange-50 hover:bg-orange-100", borderColor: "border-orange-300", textColor: "text-orange-900", category: "physical", categoryLabel: "身体感覚・生理的" },
+  { code: "35", number: "", name: "ゆっくりやる", color: "bg-stone-50 hover:bg-stone-100", borderColor: "border-stone-300", textColor: "text-stone-700", category: "neutral", categoryLabel: "その他・中立" },
+  { code: "36", number: "", name: "急いでいる、焦る", color: "bg-amber-50 hover:bg-amber-100", borderColor: "border-amber-300", textColor: "text-amber-900", category: "anxious", categoryLabel: "不安心理" },
+  { code: "37", number: "", name: "モヤモヤする", color: "bg-fuchsia-50 hover:bg-fuchsia-100", borderColor: "border-fuchsia-300", textColor: "text-fuchsia-900", category: "anxious", categoryLabel: "不安心理" },
+  { code: "38", number: "", name: "緊張する、そわそわする", color: "bg-purple-50 hover:bg-purple-100", borderColor: "border-purple-355", textColor: "text-purple-900", category: "anxious", categoryLabel: "不安心理" },
+  { code: "39", number: "", name: "あきらめ、無力感、無価値感、空虚感、ぽっかり心の穴", color: "bg-slate-100 hover:bg-slate-200", borderColor: "border-slate-400", textColor: "text-slate-700", category: "sad", categoryLabel: "悲しみ・寂しさ" },
+  { code: "40", number: "", name: "ワクワクする、期待する", color: "bg-emerald-50 hover:bg-emerald-100", borderColor: "border-emerald-355", textColor: "text-emerald-900", category: "positive", categoryLabel: "喜び・嬉しさ" },
+  { code: "41", number: "", name: "むなしい、ムダだ、努力する気が起きない", color: "bg-slate-100 hover:bg-slate-200", borderColor: "border-slate-355", textColor: "text-slate-700", category: "sad", categoryLabel: "悲しみ・寂しさ" },
+  { code: "42", number: "", name: "疲れた、体が重い、動けない、だるい", color: "bg-amber-50 hover:bg-amber-100", borderColor: "border-amber-300", textColor: "text-amber-900", category: "physical", categoryLabel: "身体感覚・生理的" },
+  { code: "43", number: "", name: "頭が痛い、気が重い", color: "bg-amber-50 hover:bg-amber-100", borderColor: "border-amber-305", textColor: "text-amber-955", category: "physical", categoryLabel: "身体感覚・生理的" },
+  { code: "44", number: "", name: "胸が痛い", color: "bg-rose-50 hover:bg-rose-100", borderColor: "border-rose-300", textColor: "text-rose-905", category: "physical", categoryLabel: "身体感覚・生理的" },
+  { code: "45", number: "", name: "胃にキリキリ来る", color: "bg-orange-50 hover:bg-orange-100", borderColor: "border-orange-355", textColor: "text-orange-955", category: "physical", categoryLabel: "身体感覚・生理的" },
+  { code: "46", number: "", name: "肩がこる、首が痛い", color: "bg-amber-50 hover:bg-amber-100", borderColor: "border-amber-300", textColor: "text-amber-900", category: "physical", categoryLabel: "身体感覚・生理的" },
+  
+  // Newly added consolidated emotions from the user prompt (without duplicate overlays/with numbers stripped)
+  { code: "47", number: "", name: "誇らしい", color: "bg-emerald-50 hover:bg-emerald-100", borderColor: "border-emerald-300", textColor: "text-emerald-900", category: "positive", categoryLabel: "喜び・嬉しさ" },
+  { code: "48", number: "", name: "達成感、充実感がある", color: "bg-teal-50 hover:bg-teal-100", borderColor: "border-teal-300", textColor: "text-teal-900", category: "positive", categoryLabel: "喜び・嬉しさ" },
+  { code: "49", number: "", name: "自由、解放感、のびのびする", color: "bg-lime-50 hover:bg-lime-100", borderColor: "border-lime-200", textColor: "text-lime-800", category: "positive", categoryLabel: "喜び・嬉しさ" },
+  { code: "50", number: "", name: "ほっとする、安堵、落ち着く", color: "bg-teal-50 hover:bg-teal-100", borderColor: "border-teal-300", textColor: "text-teal-900", category: "positive", categoryLabel: "喜び・嬉しさ" },
+  { code: "51", number: "", name: "感謝している", color: "bg-rose-50 hover:bg-rose-100", borderColor: "border-rose-300", textColor: "text-rose-900", category: "positive", categoryLabel: "喜び・嬉しさ" },
+  { code: "52", number: "", name: "愛おしい、慈しみを感じる", color: "bg-pink-50 hover:bg-pink-100", borderColor: "border-pink-300", textColor: "text-pink-900", category: "positive", categoryLabel: "喜び・嬉しさ" },
+  { code: "53", number: "", name: "尊敬、信頼できる", color: "bg-cyan-50 hover:bg-cyan-100", borderColor: "border-cyan-300", textColor: "text-cyan-900", category: "positive", categoryLabel: "喜び・嬉しさ" },
+  { code: "54", number: "", name: "裏切られた感じ", color: "bg-red-50 hover:bg-red-100", borderColor: "border-red-300", textColor: "text-red-900", category: "angry", categoryLabel: "怒り・不快" },
+  { code: "55", number: "", name: "見捨てられた感じ", color: "bg-blue-50 hover:bg-blue-100", borderColor: "border-blue-300", textColor: "text-blue-900", category: "sad", categoryLabel: "悲しみ・寂しさ" },
+  { code: "56", number: "", name: "理解された、認められた、大切にされた感じ", color: "bg-teal-50 hover:bg-teal-100", borderColor: "border-teal-200", textColor: "text-teal-900", category: "positive", categoryLabel: "喜び・嬉しさ" },
+  { code: "57", number: "", name: "誤解された、軽んじられた感じ", color: "bg-stone-50 hover:bg-stone-100", borderColor: "border-stone-300", textColor: "text-stone-700", category: "sad", categoryLabel: "悲しみ・寂しさ" },
+  { code: "58", number: "", name: "居場所がある感じ", color: "bg-emerald-50 hover:bg-emerald-100", borderColor: "border-emerald-250", textColor: "text-emerald-900", category: "positive", categoryLabel: "喜び・嬉しさ" },
+  { code: "59", number: "", name: "居場所がない感覚、疎外感", color: "bg-indigo-50 hover:bg-indigo-100", borderColor: "border-indigo-300", textColor: "text-indigo-900", category: "sad", categoryLabel: "悲しみ・寂しさ" },
+  { code: "60", number: "", name: "圧倒される、飲み込まれそうな感覚", color: "bg-purple-50 hover:bg-purple-100", borderColor: "border-purple-350", textColor: "text-purple-900", category: "anxious", categoryLabel: "不安心理" },
+  { code: "61", number: "", name: "窮屈、束縛される感じ", color: "bg-fuchsia-50 hover:bg-fuchsia-100", borderColor: "border-fuchsia-300", textColor: "text-fuchsia-900", category: "anxious", categoryLabel: "不安心理" },
+  { code: "62", number: "", name: "落ち着かない、気が散る", color: "bg-amber-50 hover:bg-amber-100", borderColor: "border-amber-300", textColor: "text-amber-900", category: "anxious", categoryLabel: "不安心理" },
+  { code: "63", number: "", name: "集中している、頭が冴える", color: "bg-emerald-50 hover:bg-emerald-100", borderColor: "border-emerald-355", textColor: "text-emerald-900", category: "positive", categoryLabel: "喜び・嬉しさ" },
+  { code: "64", number: "", name: "頭がぼんやりする、混乱する", color: "bg-slate-100 hover:bg-slate-200", borderColor: "border-slate-350", textColor: "text-slate-800", category: "anxious", categoryLabel: "不安心理" },
+  { code: "65", number: "", name: "腑に落ちる、納得、しっくりくる", color: "bg-teal-50 hover:bg-teal-100", borderColor: "border-teal-300", textColor: "text-teal-900", category: "positive", categoryLabel: "喜び・嬉しさ" },
+  { code: "66", number: "", name: "違和感がある、引っかかる感覚", color: "bg-yellow-50 hover:bg-yellow-100", borderColor: "border-yellow-300", textColor: "text-yellow-905", category: "anxious", categoryLabel: "不安心理" },
+  { code: "67", number: "", name: "共感する", color: "bg-rose-50 hover:bg-rose-100", borderColor: "border-rose-350", textColor: "text-rose-900", category: "positive", categoryLabel: "喜び・嬉しさ" },
+  { code: "68", number: "", name: "共感できない", color: "bg-slate-100 hover:bg-slate-200", borderColor: "border-slate-300", textColor: "text-slate-700", category: "neutral", categoryLabel: "その他・中立" },
+  { code: "69", number: "", name: "守られている感じ、安全・安心だ", color: "bg-emerald-50 hover:bg-emerald-100", borderColor: "border-emerald-300", textColor: "text-emerald-900", category: "positive", categoryLabel: "喜び・嬉しさ" },
+  { code: "70", number: "", name: "無防備な感じ", color: "bg-orange-50 hover:bg-orange-100", borderColor: "border-orange-300", textColor: "text-orange-900", category: "anxious", categoryLabel: "不安心理" },
+  { code: "71", number: "", name: "警戒している、危険を感じる", color: "bg-violet-50 hover:bg-violet-100", borderColor: "border-violet-350", textColor: "text-violet-900", category: "anxious", categoryLabel: "不安心理" },
+  { code: "72", number: "", name: "活力が湧く、生き生きしている", color: "bg-emerald-50 hover:bg-emerald-100", borderColor: "border-emerald-300", textColor: "text-emerald-900", category: "positive", categoryLabel: "喜び・嬉しさ" },
+  { code: "73", number: "", name: "消耗している、疲弊した感じ", color: "bg-amber-50 hover:bg-amber-100", borderColor: "border-amber-300", textColor: "text-amber-900", category: "physical", categoryLabel: "身体感覚・生理的" },
+  { code: "74", number: "", name: "凍りついた感じ、麻痺・フリーズ", color: "bg-slate-100 hover:bg-slate-200", borderColor: "border-slate-350", textColor: "text-slate-800", category: "physical", categoryLabel: "身体感覚・生理的" },
+  { code: "75", number: "", name: "つながっている感じ、連帯感", color: "bg-pink-50 hover:bg-pink-100", borderColor: "border-pink-300", textColor: "text-pink-900", category: "positive", categoryLabel: "喜び・嬉しさ" }
+];

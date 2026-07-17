@@ -1,0 +1,130 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;650;800&family=Space+Grotesk:wght@400;600;750&family=JetBrains+Mono:wght@400;600&family=Noto+Serif+JP:wght@300;400;500&family=Noto+Sans+JP:wght@700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Noto Sans JP", "Inter", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
+  --font-serif: "Noto Serif JP", "Hiragino Mincho ProN", "Yu Mincho", "MS Mincho", "Space Grotesk", Georgia, serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+/* Custom CSS Overrides for a Friendly Forest Library & Notebook Feel */
+html, body {
+  background-color: #F5FAF6 !important;
+  color: #455A64 !important;
+  font-family: var(--font-serif);
+  font-weight: 300; /* 細め (Light) */
+}
+
+/* Make body background persistent and warm */
+#root, body {
+  background-color: #F5FAF6 !important;
+}
+
+/* Force standard dark text color to be our beautiful deep charcoal text color #455A64 for readability + Mincho style for body text */
+p, span, label, li, th, td, option {
+  color: #455A64 !important;
+  font-family: var(--font-serif) !important;
+  font-weight: 300 !important; /* 細めの明朝 */
+}
+
+/* Text white configurations should stay white */
+.text-white, .text-white * {
+  color: #ffffff !important;
+}
+
+/* Redefining background classes for the requested Card Background (#F7FFF7) plus warm page texture */
+.bg-white, 
+.bg-\[\#FDFCF9\], 
+.bg-\[\#FAF9F5\], 
+.bg-\[\#FAF5EC\]\/95, 
+.bg-\[\#F9F8F6\], 
+.bg-\[\#FBF9F6\],
+.bg-stone-50 {
+  background-color: #F7FFF7 !important;
+  border-color: rgba(165, 214, 167, 0.2) !important;
+}
+
+/* Accent boxes inside cards */
+.bg-emerald-50, .bg-\[\#E2F2E4\] {
+  background-color: #EEF6F0 !important;
+  border-color: #A5D6A7 !important;
+}
+
+/* Primary color #4A5D4E replacement -> Soft green Selected State (#81C784) */
+.bg-\[\#4A5D4E\], 
+.hover\:bg-\[\#4A5D4E\]:hover,
+.bg-emerald-600 {
+  background-color: #81C784 !important;
+}
+
+/* Accent border replacements */
+.border-\[\#4A5D4E\]\/10, 
+.border-\[\#4A5D4E\]\/20,
+.border-emerald-100 {
+  border-color: rgba(165, 214, 167, 0.4) !important;
+}
+
+/* Active ring color mapping */
+.focus\:ring-\[\#4A5D4E\]:focus,
+.focus\:border-\[\#4A5D4E\]:focus {
+  --tw-ring-color: #81C784 !important;
+  border-color: #81C784 !important;
+}
+
+/* Custom button states to be super soft, organic and friendly */
+button, select {
+  font-family: var(--font-sans);
+  color: #455A64 !important;
+}
+
+/* Force inputs and textareas to be ultra-bold Gothic font */
+input, textarea {
+  font-family: var(--font-sans) !important;
+  font-weight: 700 !important; /* ゴシック太め */
+  color: #455A64 !important;
+}
+
+/* Action button exceptions to make sure white texts inside are fully legible */
+button.bg-\[\#4A5D4E\],
+button.bg-emerald-600,
+button.bg-rose-600,
+.bg-rose-600,
+.bg-[#81C784] {
+  color: #ffffff !important;
+}
+
+button.bg-\[\#4A5D4E\] *,
+button.bg-emerald-600 *,
+button.bg-rose-600 *,
+.bg-[#81C784] * {
+  color: #ffffff !important;
+}
+
+/* Active library tab links styles */
+.text-\[\#4A5D4E\] {
+  color: #81C784 !important;
+}
+
+/* Page titles and displays */
+h1, h2, h3, h4, .font-serif {
+  font-family: var(--font-serif);
+  font-weight: 850;
+  letter-spacing: -0.025em;
+  color: #455A64 !important;
+}
+
+/* Custom scrollbar to match our soft forest look */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #F5FAF6;
+}
+::-webkit-scrollbar-thumb {
+  background: #A5D6A7;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #81C784;
+}

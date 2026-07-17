@@ -1,0 +1,6 @@
+{
+  "name": "脳内図書館",
+  "description": "音声メモから頭と体の文脈を発見する行動パターン発見器",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
