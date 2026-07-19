@@ -389,6 +389,26 @@ function saveSandboxDb(db: { users: SandboxUser[]; logs: SandboxLog[] }) {
   }
 }
 
+// Unified /api/auth compatibility middleware for Express server
+app.use((req, res, next) => {
+  if (req.path === "/api/auth" && req.method === "POST") {
+    const { action } = req.body || {};
+    console.log(`[Auth Middleware] Rewriting /api/auth request with action: ${action}`);
+    if (action === "login") {
+      req.url = "/api/auth/login";
+    } else if (action === "register") {
+      req.url = "/api/auth/register";
+    } else if (action === "update-profile") {
+      req.url = "/api/auth/update-profile";
+    } else if (action === "reset-password") {
+      req.url = "/api/auth/reset-password";
+    } else if (action === "delete-account") {
+      req.url = "/api/auth/delete-account";
+    }
+  }
+  next();
+});
+
 // User Registration
 app.post("/api/auth/register", async (req, res) => {
   try {
