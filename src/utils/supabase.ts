@@ -434,7 +434,51 @@ class CloudSupabaseService {
           this.notifyListeners();
           return { data: { user: uProfile }, error: null };
         } else {
-          console.warn("Direct Supabase Auth signIn returned error, falling back to server-side API login:", error?.message);
+          console.warn("Direct Supabase Auth signIn returned error, trying direct DB table query fallback:", error?.message);
+          
+          // Attempt client-side direct table-based login fallback to bypass any server-side cookie-check / iframe issues
+          try {
+            const normalizedEmail = email.toLowerCase().trim();
+            const { data: dbUser, error: dbError } = await Promise.race([
+              realSupabase.from("hippocampus_users").select("*").eq("email", normalizedEmail).maybeSingle(),
+              new Promise<any>((_, reject) => setTimeout(() => reject(new Error("Direct DB user fetch timed out")), 2000))
+            ]);
+
+            if (dbUser && !dbError) {
+              const passwordHash = dbUser.password_hash || dbUser.password;
+              const isPasswordCorrect = passwordHash && (
+                (passwordHash.startsWith("$2a$") || passwordHash.startsWith("$2b$"))
+                  ? bcrypt.compareSync(password, passwordHash)
+                  : passwordHash === password
+              );
+
+              if (isPasswordCorrect) {
+                const uProfile: UserProfile = {
+                  id: dbUser.id,
+                  email: dbUser.email,
+                  name: dbUser.name || "探求者",
+                  address: dbUser.address || "",
+                  phone: dbUser.phone || "",
+                  birthDate: dbUser.birth_date || dbUser.birthDate || "",
+                };
+                console.log("Direct client-side DB table login fallback succeeded for:", normalizedEmail);
+                this.activeUser = uProfile;
+                localStorage.setItem("hippocampus_session_user", JSON.stringify(uProfile));
+                this.notifyListeners();
+                return { data: { user: uProfile }, error: null };
+              } else {
+                console.warn("Direct client-side DB table login fallback: password incorrect.");
+              }
+            } else if (dbError) {
+              console.warn("Direct client-side DB table query returned error:", dbError);
+            } else {
+              console.warn("Direct client-side DB table query returned no user.");
+            }
+          } catch (dbErr) {
+            console.warn("Direct client-side DB table login fallback exception:", dbErr);
+          }
+          
+          console.warn("Direct DB fallback did not succeed, continuing to server-side API login fallback...");
         }
       } catch (err) {
         console.warn("Exception in direct Supabase Auth signIn, falling back to server-side API login:", err);

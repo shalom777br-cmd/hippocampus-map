@@ -336,15 +336,15 @@ AIによる当時の分析サマリー: "${l.catComment || "なし"}"
 
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.SUPABASE_URL || "";
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "";
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "";
 
 const supabase = (supabaseUrl && supabaseServiceKey)
   ? createClient(supabaseUrl, supabaseServiceKey)
   : null;
 
 if (!supabase) {
-  console.warn("WARNING: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are not configured on the server-side. Falling back to Server-Side Sandbox JSON Database.");
+  console.warn("WARNING: SUPABASE_URL or fallback key not configured on the server-side. Falling back to Server-Side Sandbox JSON Database.");
 }
 
 // Server-Side Local Sandbox Database Fallback
