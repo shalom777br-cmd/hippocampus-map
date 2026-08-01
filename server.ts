@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import { GoogleGenAI, Type } from "@google/genai";
 import { createServer as createViteServer } from "vite";
 import bcrypt from "bcryptjs";
+import librarySearchHandler from "./api/library/search";
 
 // Robust log normalizer to safely parse and structure any row from the hippocampus_logs table
 function normalizeRowToTimelineLog(row: any): any {
@@ -799,14 +800,22 @@ app.get(["/api/cloud", "/api/cloud/sync-pull"], async (req, res) => {
     const reviews: any[] = [];
 
     if (rows && rows.length > 0) {
+      const safeParse = (c: any) => {
+        if (typeof c === "object" && c !== null) return c;
+        if (typeof c === "string") {
+          try { return JSON.parse(c); } catch { return c; }
+        }
+        return c;
+      };
+
       for (const row of rows) {
         try {
           if (row.entry_type === "book") {
-            books.push(JSON.parse(row.content));
+            books.push(safeParse(row.content));
           } else if (row.entry_type === "settings") {
-            settings = JSON.parse(row.content);
+            settings = safeParse(row.content);
           } else if (row.entry_type === "review") {
-            reviews.push(JSON.parse(row.content));
+            reviews.push(safeParse(row.content));
           } else if (row.entry_type === "log" || row.entry_type === "timeline_import" || row.entry_type === "received_memory") {
             // Treat as log and normalize it robustly
             const normalized = normalizeRowToTimelineLog(row);
@@ -822,9 +831,15 @@ app.get(["/api/cloud", "/api/cloud/sync-pull"], async (req, res) => {
 
     res.json({ logs, books, settings, reviews, hasMore });
   } catch (err: any) {
-    console.error("Error in /api/cloud/sync-pull:", err);
-    res.status(500).json({ message: `サーバーエラーが発生しました: ${err.message}` });
+    const errMsg = typeof err === "string" ? err : err?.message || String(err);
+    console.error("Error in /api/cloud/sync-pull:", errMsg);
+    res.status(500).json({ message: `サーバーエラーが発生しました: ${errMsg}` });
   }
+});
+
+// Library Keyword Search Route
+app.all("/api/library/search", async (req, res) => {
+  await librarySearchHandler(req as any, res as any);
 });
 
 // Cloud Sync Push

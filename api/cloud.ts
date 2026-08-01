@@ -113,14 +113,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const reviews: any[] = [];
 
         if (rows && rows.length > 0) {
+          const safeParse = (c: any) => {
+            if (typeof c === "object" && c !== null) return c;
+            if (typeof c === "string") {
+              try { return JSON.parse(c); } catch { return c; }
+            }
+            return c;
+          };
+
           for (const row of rows) {
             try {
               if (row.entry_type === "book") {
-                books.push(JSON.parse(row.content));
+                books.push(safeParse(row.content));
               } else if (row.entry_type === "settings") {
-                settings = JSON.parse(row.content);
+                settings = safeParse(row.content);
               } else if (row.entry_type === "review") {
-                reviews.push(JSON.parse(row.content));
+                reviews.push(safeParse(row.content));
               } else if (row.entry_type === "log" || row.entry_type === "timeline_import" || row.entry_type === "received_memory") {
                 // Treat as log and normalize it robustly
                 const normalized = normalizeRowToTimelineLog(row);
@@ -267,7 +275,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
   } catch (err: any) {
-    console.error(`Error in cloud sync API [${action}]:`, err);
-    res.status(500).json({ message: `サーバーエラーが発生しました: ${err.message}` });
+    const errMsg = typeof err === "string" ? err : err?.message || String(err);
+    console.error(`Error in cloud sync API [${action}]:`, errMsg);
+    res.status(500).json({ message: `サーバーエラーが発生しました: ${errMsg}` });
   }
 }

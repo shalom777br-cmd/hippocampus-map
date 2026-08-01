@@ -2,7 +2,20 @@ import React, { useState, useEffect, useRef } from "react";
 import Tree from "react-d3-tree";
 import { realSupabase, isRealSupabaseConfigured } from "../utils/supabase";
 import { UserProfile } from "../types";
-import { Plus, Edit2, Trash2, HelpCircle, Network, Info, Save, X, Layers, RefreshCw } from "lucide-react";
+import { Plus, Edit2, Trash2, HelpCircle, Network, Info, Save, X, Layers, RefreshCw, Search, FileText, Sparkles, Clock, Copy, Check, Filter, MessageSquare, ExternalLink } from "lucide-react";
+
+interface SearchResultItem {
+  id: string;
+  source: string;
+  sourceLabel: string;
+  title: string;
+  category?: string;
+  content: string;
+  snippet: string;
+  occurred_at?: string;
+  created_at?: string;
+  match_count: number;
+}
 
 interface NodeItem {
   id: string;
@@ -75,6 +88,105 @@ export default function MindMap({ user, showToast }: MindMapProps) {
     node_type: "child",
     parent_id: "joanna"
   });
+
+  // Keyword Search states
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [activeSearchQuery, setActiveSearchQuery] = useState<string>("");
+  const [searchKeywords, setSearchKeywords] = useState<string[]>([]);
+  const [isSearching, setIsSearching] = useState<boolean>(false);
+  const [searchResults, setSearchResults] = useState<SearchResultItem[]>([]);
+  const [selectedSourceFilter, setSelectedSourceFilter] = useState<string>("all");
+  const [searchExecuted, setSearchExecuted] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<"map" | "search">("map");
+  const [selectedDetailItem, setSelectedDetailItem] = useState<SearchResultItem | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const handlePerformSearch = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const queryToSearch = searchQuery.trim();
+    if (!queryToSearch) {
+      setSearchResults([]);
+      setSearchExecuted(false);
+      setActiveSearchQuery("");
+      setSearchKeywords([]);
+      return;
+    }
+
+    setIsSearching(true);
+    setSearchExecuted(true);
+    setActiveSearchQuery(queryToSearch);
+    const keywords = queryToSearch.split(/\s+/).filter(Boolean);
+    setSearchKeywords(keywords);
+    setActiveTab("search");
+
+    try {
+      const res = await fetch("/api/library/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: queryToSearch,
+          userId: user?.id || "5fb13a09-5ce3-4aec-bb4e-8e357070b76b"
+        })
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+      setSearchResults(data.results || []);
+    } catch (err: any) {
+      console.error("Search failed:", err);
+      showToast("検索中にエラーが発生しましたにゃ🐾", "error");
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleClearSearch = () => {
+    setSearchQuery("");
+    setActiveSearchQuery("");
+    setSearchKeywords([]);
+    setSearchResults([]);
+    setSearchExecuted(false);
+    setSelectedSourceFilter("all");
+    setActiveTab("map");
+  };
+
+  const handleCopyText = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    showToast("テキストをクリップボードにコピーしたにゃ！", "success");
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const renderHighlightedText = (text: string, keywords: string[]) => {
+    if (!text || !keywords || keywords.length === 0) return text;
+    const pattern = keywords
+      .map(k => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+      .filter(Boolean)
+      .join("|");
+    if (!pattern) return text;
+
+    try {
+      const regex = new RegExp(`(${pattern})`, "gi");
+      const parts = text.split(regex);
+
+      return parts.map((part, idx) => {
+        const isMatch = keywords.some(k => k.toLowerCase() === part.toLowerCase());
+        if (isMatch) {
+          return (
+            <mark key={idx} className="bg-amber-200 text-stone-900 font-bold px-0.5 rounded-xs">
+              {part}
+            </mark>
+          );
+        }
+        return part;
+      });
+    } catch {
+      return text;
+    }
+  };
 
   // SVG dimensions for tree centering
   const containerRef = useRef<HTMLDivElement>(null);
@@ -573,19 +685,50 @@ export default function MindMap({ user, showToast }: MindMapProps) {
   return (
     <div className="flex flex-col h-[calc(100vh-210px)] min-h-[500px] bg-[#FAF9F5] border border-stone-200 rounded-3xl overflow-hidden shadow-xs relative">
       
-      {/* Mindmap controls bar */}
-      <div className="bg-white px-6 py-3 border-b border-stone-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shrink-0 z-10 shadow-2xs">
-        <div className="text-left">
+      {/* Mindmap controls & search bar */}
+      <div className="bg-white px-6 py-3 border-b border-stone-100 flex flex-col md:flex-row md:items-center justify-between gap-3 shrink-0 z-10 shadow-2xs">
+        <div className="text-left shrink-0">
           <h3 className="font-serif font-black text-sm text-[#4A5D4E] flex items-center gap-1.5 leading-none">
             <Network className="w-4 h-4 text-[#81C784]" />
-            脳内自己理解マインドマップ
+            脳内自己理解マインドマップ ＆ 脳内図書館検索
           </h3>
           <p className="text-[10px] text-stone-500 font-bold mt-1">
-            「ジョアンナ」を中心とする、価値観やルール、関係性の鳥瞰図（俯瞰図）だにゃ。ノードをタップして展開・縮小できます🐾
+            思考や感情の鳥瞰図（俯瞰図）閲覧と、過去の会話履歴・価値観のキーワード検索だにゃ🐾
           </p>
         </div>
 
-        <div className="flex items-center gap-2 self-start sm:self-auto">
+        {/* Search Input Box */}
+        <form onSubmit={handlePerformSearch} className="flex-1 max-w-lg flex items-center gap-1.5">
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="会話履歴・価値観をキーワード検索 (例: 境界線, 草原のお兄さん)..."
+              className="w-full pl-9 pr-8 py-1.5 bg-stone-50 hover:bg-white focus:bg-white border border-stone-200 rounded-xl text-xs font-bold text-stone-800 focus:outline-none focus:ring-1 focus:ring-[#81C784] transition-all shadow-2xs"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={handleClearSearch}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 p-0.5 cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+          <button
+            type="submit"
+            disabled={isSearching}
+            className="px-3.5 py-1.5 bg-[#4A5D4E] hover:bg-[#3B4A3E] text-white font-bold text-xs rounded-xl flex items-center gap-1 transition-all shadow-xs disabled:opacity-50 cursor-pointer shrink-0"
+          >
+            {isSearching ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+            検索
+          </button>
+        </form>
+
+        <div className="flex items-center gap-2 self-start md:self-auto shrink-0">
           <button
             onClick={() => handleOpenAddNode()}
             className="px-3 py-1.5 bg-[#81C784] hover:bg-[#66BB6A] text-white font-black text-xs rounded-xl flex items-center gap-1 transition-all active:scale-95 shadow-sm cursor-pointer select-none"
@@ -612,8 +755,52 @@ export default function MindMap({ user, showToast }: MindMapProps) {
         </div>
       </div>
 
-      {/* Main split display: Map Tree & Detail side drawer */}
-      <div className="flex-1 flex flex-col md:flex-row relative overflow-hidden">
+      {/* Sub-navigation View Tabs */}
+      <div className="bg-stone-50 px-6 py-2 border-b border-stone-100 flex flex-wrap items-center justify-between text-xs font-bold shrink-0 gap-2">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setActiveTab("map")}
+            className={`px-3 py-1 rounded-xl flex items-center gap-1.5 transition-all cursor-pointer ${
+              activeTab === "map"
+                ? "bg-white text-[#4A5D4E] shadow-2xs border border-stone-200"
+                : "text-stone-500 hover:text-stone-700"
+            }`}
+          >
+            <Network className="w-3.5 h-3.5 text-[#81C784]" />
+            マインドマップ
+          </button>
+          <button
+            onClick={() => setActiveTab("search")}
+            className={`px-3 py-1 rounded-xl flex items-center gap-1.5 transition-all cursor-pointer ${
+              activeTab === "search"
+                ? "bg-white text-[#4A5D4E] shadow-2xs border border-stone-200"
+                : "text-stone-500 hover:text-stone-700"
+            }`}
+          >
+            <Search className="w-3.5 h-3.5 text-amber-600" />
+            キーワード検索結果
+            {searchExecuted && (
+              <span className="ml-1 px-1.5 py-0.2 bg-[#81C784]/20 text-[#2E6B34] text-[10px] rounded-full font-black">
+                {searchResults.length}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {activeTab === "search" && searchExecuted && (
+          <div className="text-[11px] text-stone-500 font-bold flex items-center gap-1">
+            <span>検索ワード:</span>
+            <span className="px-2 py-0.5 bg-amber-100 text-amber-900 rounded-md font-extrabold border border-amber-200">
+              {activeSearchQuery}
+            </span>
+            <span>(全 <b className="text-[#4A5D4E]">{searchResults.length}</b> 件)</span>
+          </div>
+        )}
+      </div>
+
+      {/* Main Content Area: Map Tree OR Search Results */}
+      {activeTab === "map" ? (
+        <div className="flex-1 flex flex-col md:flex-row relative overflow-hidden">
         
         {/* Tree Container */}
         <div ref={containerRef} className="flex-1 h-full bg-[#FCFBF8] relative outline-none">
@@ -760,6 +947,223 @@ export default function MindMap({ user, showToast }: MindMapProps) {
           </div>
         )}
       </div>
+      ) : (
+        /* KEYWORD SEARCH RESULTS VIEW */
+        <div className="flex-1 bg-[#FCFBF8] p-4 md:p-6 overflow-y-auto space-y-4 text-left">
+          {/* Source Filter Tabs */}
+          {searchExecuted && searchResults.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 pb-2 border-b border-stone-200/60">
+              <span className="text-xs font-extrabold text-stone-500 flex items-center gap-1 mr-1">
+                <Filter className="w-3.5 h-3.5" />
+                絞り込み:
+              </span>
+              {[
+                { id: "all", label: "すべて", count: searchResults.length },
+                { id: "claude_chat_history", label: "Claude 会話", count: searchResults.filter(r => r.source === "claude_chat_history").length },
+                { id: "chatgpt_chat_history", label: "ChatGPT 会話", count: searchResults.filter(r => r.source === "chatgpt_chat_history").length },
+                { id: "joanna_value", label: "ジョアンナ価値観", count: searchResults.filter(r => r.source === "joanna_value").length },
+                { id: "hippocampus_logs", label: "タイムライン記憶", count: searchResults.filter(r => r.source === "hippocampus_logs").length },
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setSelectedSourceFilter(tab.id)}
+                  className={`px-3 py-1 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1 ${
+                    selectedSourceFilter === tab.id
+                      ? "bg-[#4A5D4E] text-white shadow-xs"
+                      : "bg-white text-stone-600 border border-stone-200 hover:bg-stone-50"
+                  }`}
+                >
+                  {tab.label}
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${selectedSourceFilter === tab.id ? "bg-white/20 text-white" : "bg-stone-100 text-stone-500"}`}>
+                    {tab.count}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Results List */}
+          {isSearching ? (
+            <div className="py-20 flex flex-col items-center justify-center gap-3">
+              <div className="w-10 h-10 border-4 border-[#81C784] border-t-transparent rounded-full animate-spin"></div>
+              <p className="text-xs font-bold text-stone-500 animate-pulse">脳内図書館の全書庫（Claude/ChatGPT/価値観/タイムライン）を検索中だにゃ🐾...</p>
+            </div>
+          ) : !searchExecuted ? (
+            <div className="py-16 flex flex-col items-center justify-center text-center max-w-md mx-auto space-y-3">
+              <div className="w-14 h-14 bg-amber-50 rounded-2xl border border-amber-200/60 flex items-center justify-center text-amber-700">
+                <Search className="w-7 h-7" />
+              </div>
+              <h4 className="font-serif font-black text-sm text-[#4A5D4E]">脳内図書館 キーワード検索</h4>
+              <p className="text-xs text-stone-500 font-bold leading-relaxed">
+                上部の検索窓にキーワード（例: 「境界線」「草原のお兄さん」「ブラジル」）を入力して検索すると、ClaudeやChatGPTの過去対話・ジョアンナの記憶からピンポイントでヒットしますにゃ🐾
+              </p>
+            </div>
+          ) : searchResults.filter(r => selectedSourceFilter === "all" || r.source === selectedSourceFilter).length === 0 ? (
+            /* EMPTY STATE REQUIREMENTS */
+            <div className="py-16 flex flex-col items-center justify-center text-center max-w-md mx-auto space-y-3 bg-white p-8 rounded-3xl border border-stone-200 shadow-2xs">
+              <div className="w-16 h-16 bg-stone-100 rounded-full flex items-center justify-center text-stone-400 text-2xl">
+                🐱
+              </div>
+              <h4 className="font-serif font-black text-sm text-stone-800">
+                該当する会話が見つかりませんでした
+              </h4>
+              <p className="text-xs text-stone-500 font-bold leading-relaxed">
+                キーワード「<span className="text-amber-800 font-extrabold">{activeSearchQuery}</span>」に一致する記録は脳内図書館に見つからなかったにゃ。別の単語で試してみてください🐾
+              </p>
+              <button
+                onClick={handleClearSearch}
+                className="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs rounded-xl transition-all cursor-pointer mt-2"
+              >
+                検索をリセット
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              {searchResults
+                .filter(r => selectedSourceFilter === "all" || r.source === selectedSourceFilter)
+                .map(item => {
+                  let sourceBadgeStyle = "bg-stone-100 text-stone-700 border-stone-200";
+                  if (item.source === "claude_chat_history") {
+                    sourceBadgeStyle = "bg-purple-100 text-purple-800 border-purple-200";
+                  } else if (item.source === "chatgpt_chat_history") {
+                    sourceBadgeStyle = "bg-emerald-100 text-emerald-800 border-emerald-200";
+                  } else if (item.source === "joanna_value") {
+                    sourceBadgeStyle = "bg-amber-100 text-amber-900 border-amber-200";
+                  } else if (item.source === "hippocampus_logs") {
+                    sourceBadgeStyle = "bg-sky-100 text-sky-800 border-sky-200";
+                  }
+
+                  const formattedDate = item.occurred_at || item.created_at
+                    ? new Date(item.occurred_at || item.created_at || "").toLocaleDateString("ja-JP", {
+                        year: "numeric",
+                        month: "2-digit",
+                        day: "2-digit"
+                      })
+                    : "";
+
+                  return (
+                    <div
+                      key={`${item.source}-${item.id}`}
+                      onClick={() => setSelectedDetailItem(item)}
+                      className="bg-white p-4 rounded-2xl border border-stone-200 shadow-2xs hover:shadow-md hover:border-[#81C784] transition-all cursor-pointer flex flex-col justify-between space-y-3 group text-left"
+                    >
+                      <div className="space-y-2">
+                        {/* Header Badge & Metadata */}
+                        <div className="flex items-center justify-between gap-1.5 flex-wrap text-[10px] font-extrabold">
+                          <span className={`px-2 py-0.5 rounded-md border ${sourceBadgeStyle}`}>
+                            {item.sourceLabel}
+                          </span>
+
+                          <div className="flex items-center gap-1 text-stone-400">
+                            {item.match_count > 0 && (
+                              <span className="px-1.5 py-0.2 bg-amber-100 text-amber-900 rounded font-black">
+                                {item.match_count}件一致
+                              </span>
+                            )}
+                            {formattedDate && (
+                              <span className="flex items-center gap-0.5">
+                                <Clock className="w-3 h-3 text-stone-400" />
+                                {formattedDate}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Title */}
+                        <h5 className="font-serif font-black text-xs text-stone-800 line-clamp-1 group-hover:text-[#4A5D4E] transition-colors">
+                          {item.title}
+                        </h5>
+
+                        {/* Excerpt Snippet */}
+                        <p className="text-[11px] text-stone-600 font-medium leading-relaxed line-clamp-3 bg-[#FAF9F6] p-2.5 rounded-xl border border-stone-100">
+                          {renderHighlightedText(item.snippet || item.content, searchKeywords)}
+                        </p>
+                      </div>
+
+                      <div className="pt-2 border-t border-stone-100 flex items-center justify-between text-[10px] font-extrabold text-[#4A5D4E]">
+                        <span className="flex items-center gap-1 group-hover:underline">
+                          <FileText className="w-3 h-3" />
+                          本文全体を見る
+                        </span>
+                        <span className="text-stone-400 group-hover:text-[#81C784]">→</span>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* DETAIL MODAL OVERLAY */}
+      {selectedDetailItem && (
+        <div className="fixed inset-0 bg-stone-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-[#FCFBF8] rounded-3xl p-6 max-w-2xl w-full border border-stone-200 shadow-2xl space-y-4 text-left font-sans max-h-[85vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="border-b border-stone-200 pb-3 flex items-start justify-between gap-2 shrink-0">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-[10px] font-extrabold">
+                  <span className="px-2 py-0.5 bg-[#4A5D4E] text-white rounded-md">
+                    {selectedDetailItem.sourceLabel}
+                  </span>
+                  {selectedDetailItem.category && (
+                    <span className="px-2 py-0.5 bg-stone-100 text-stone-600 rounded-md border border-stone-200">
+                      {selectedDetailItem.category}
+                    </span>
+                  )}
+                  {selectedDetailItem.occurred_at && (
+                    <span className="text-stone-400 flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {new Date(selectedDetailItem.occurred_at).toLocaleString("ja-JP")}
+                    </span>
+                  )}
+                </div>
+                <h3 className="font-serif font-black text-base text-stone-800">
+                  {selectedDetailItem.title}
+                </h3>
+              </div>
+              <button
+                onClick={() => setSelectedDetailItem(null)}
+                className="text-stone-400 hover:text-stone-600 p-1.5 rounded-full hover:bg-stone-100 transition-all cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Content Text Body */}
+            <div className="flex-1 overflow-y-auto p-4 bg-white rounded-2xl border border-stone-200 text-xs text-stone-800 leading-relaxed space-y-3 font-sans whitespace-pre-wrap selection:bg-amber-200">
+              {renderHighlightedText(selectedDetailItem.content, searchKeywords)}
+            </div>
+
+            {/* Modal Footer Actions */}
+            <div className="pt-2 border-t border-stone-200 flex items-center justify-between font-black text-xs shrink-0">
+              <button
+                onClick={() => handleCopyText(selectedDetailItem.content, selectedDetailItem.id)}
+                className="px-3.5 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                {copiedId === selectedDetailItem.id ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    コピー完了！
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5" />
+                    テキストをコピー
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={() => setSelectedDetailItem(null)}
+                className="px-5 py-2 bg-[#4A5D4E] hover:bg-[#3B4A3E] text-white rounded-xl transition-all cursor-pointer shadow-xs"
+              >
+                閉じる
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add/Edit Form Overlay Modal */}
       {showFormModal && (
