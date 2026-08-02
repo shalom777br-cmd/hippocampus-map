@@ -2,6 +2,48 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { handleCors } from "./_lib/cors.js";
 import { getSupabaseClient } from "./_lib/supabase.js";
 
+function safeJsonValue<T>(obj: T): T {
+  const cache = new WeakSet();
+  function clean(val: any): any {
+    if (val === null || typeof val !== "object") {
+      return val;
+    }
+    if (typeof val === "function" || typeof val === "symbol") {
+      return undefined;
+    }
+    if (cache.has(val)) {
+      return undefined;
+    }
+    cache.add(val);
+
+    if (Array.isArray(val)) {
+      return val.map(clean).filter((item) => item !== undefined);
+    }
+
+    const res: Record<string, any> = {};
+    for (const key of Object.keys(val)) {
+      try {
+        const cleanedVal = clean(val[key]);
+        if (cleanedVal !== undefined) {
+          res[key] = cleanedVal;
+        }
+      } catch {
+        // Skip unreadable properties
+      }
+    }
+    return res;
+  }
+  return clean(obj) as T;
+}
+
+function safeJsonStringify(obj: any, space?: number): string {
+  try {
+    return JSON.stringify(safeJsonValue(obj), null, space);
+  } catch {
+    return "{}";
+  }
+}
+
 function normalizeRowToTimelineLog(row: any): any {
   if (!row) return null;
   let parsed: any = null;
@@ -15,55 +57,63 @@ function normalizeRowToTimelineLog(row: any): any {
         isJson = true;
       }
     } else if (row.content && typeof row.content === "object") {
-      parsed = row.content;
+      parsed = safeJsonValue(row.content);
       isJson = true;
     }
   } catch (e) {
     console.warn("Failed parsing JSON content for row:", row.id, e);
   }
 
-  // Fallback to raw content if not a valid JSON object
-  if (!parsed || typeof parsed !== "object") {
-    parsed = { transcription: row.content || "" };
-  }
-
-  // Ensure robust original sub-object
-  const original = parsed.original || {
-    transcription: parsed.transcription || parsed.text || parsed.content || (isJson ? "" : row.content) || "",
-    manualNote: parsed.manualNote || parsed.memo || "",
-    datetime: parsed.datetime || row.occurred_at || row.created_at || new Date().toISOString(),
-    tags: Array.isArray(parsed.tags) ? parsed.tags : []
+  const ensureStr = (val: any): string => {
+    if (typeof val === "string") return val;
+    if (!val) return "";
+    if (typeof val === "object") {
+      if (typeof val.transcription === "string") return val.transcription;
+      if (typeof val.manualNote === "string") return val.manualNote;
+      if (typeof val.summary === "string") return val.summary;
+      if (val.original) return ensureStr(val.original.transcription || val.original.manualNote);
+      if (val.aiData) return ensureStr(val.aiData.summary);
+      return "";
+    }
+    return String(val);
   };
 
-  if (!original.transcription) {
-    original.transcription = parsed.transcription || parsed.text || parsed.content || row.content || "";
-  }
-  if (!original.datetime) {
-    original.datetime = row.occurred_at || row.created_at || new Date().toISOString();
-  }
-  if (!original.tags || !Array.isArray(original.tags)) {
-    original.tags = Array.isArray(parsed.tags) ? parsed.tags : [];
+  if (!parsed || typeof parsed !== "object") {
+    parsed = { transcription: ensureStr(row.content) };
   }
 
-  // Ensure robust aiData sub-object to prevent frontend rendering crashes
-  const aiData = parsed.aiData || {
-    summary: parsed.summary || "インポートされた外部記憶",
-    analysisStr: parsed.analysisStr || "外部データベースから読み出された記憶データですにゃ。",
-    emotion: parsed.emotion || row.entry_type || "記憶",
-    emotionColor: parsed.emotionColor || "#E3ECF5",
-    catComment: parsed.catComment || "海馬の書庫から見つかった大切な思い出にゃ。",
-    reflectiveQuestion: parsed.reflectiveQuestion || "この記憶から新しく思い返すことはありますくにゃ？",
-    patterns: parsed.patterns,
-    scenariomap: parsed.scenariomap
+  const rawOriginal = parsed.original || {};
+  const original = {
+    transcription: ensureStr(rawOriginal.transcription || parsed.transcription || parsed.text || parsed.content || (isJson ? "" : row.content)),
+    manualNote: ensureStr(rawOriginal.manualNote || parsed.manualNote || parsed.memo),
+    datetime: ensureStr(rawOriginal.datetime || parsed.datetime || row.occurred_at || row.created_at || new Date().toISOString()),
+    detectedDateStr: ensureStr(rawOriginal.detectedDateStr || parsed.detectedDateStr),
+    tags: Array.isArray(rawOriginal.tags) ? rawOriginal.tags : (Array.isArray(parsed.tags) ? parsed.tags : []),
+    emotions: Array.isArray(rawOriginal.emotions) ? rawOriginal.emotions : (Array.isArray(parsed.emotions) ? parsed.emotions : []),
+    isImported: Boolean(rawOriginal.isImported || parsed.isImported)
+  };
+
+  const rawAiData = parsed.aiData || {};
+  const aiData = {
+    summary: ensureStr(rawAiData.summary || parsed.summary || "インポートされた外部記憶"),
+    analysisStr: ensureStr(rawAiData.analysisStr || parsed.analysisStr || "外部データベースから読み出された記憶データですにゃ。"),
+    emotion: ensureStr(rawAiData.emotion || parsed.emotion || row.entry_type || "記憶"),
+    emotionColor: ensureStr(rawAiData.emotionColor || parsed.emotionColor || "#E3ECF5"),
+    catComment: ensureStr(rawAiData.catComment || parsed.catComment || "海馬の書庫から見つかった大切な思い出にゃ。"),
+    reflectiveQuestion: ensureStr(rawAiData.reflectiveQuestion || parsed.reflectiveQuestion || "この記憶から新しく思い返すことはありますくにゃ？"),
+    patterns: rawAiData.patterns || parsed.patterns,
+    scenariomap: rawAiData.scenariomap || parsed.scenariomap,
+    librarianComment: ensureStr(rawAiData.librarianComment || parsed.librarianComment),
+    stressors: Array.isArray(rawAiData.stressors) ? rawAiData.stressors : (Array.isArray(parsed.stressors) ? parsed.stressors : [])
   };
 
   return {
-    id: parsed.id || row.id || `log-${row.id || Math.random().toString(36).substr(2, 9)}`,
+    id: String(parsed.id || row.id || `log-${row.id || Math.random().toString(36).substr(2, 9)}`),
     userId: row.user_id,
-    entryType: row.entry_type || "log",
+    entryType: String(row.entry_type || "log"),
     original,
     aiData,
-    createdTime: parsed.createdTime || new Date(original.datetime).getTime() || Date.now()
+    createdTime: Number(parsed.createdTime) || new Date(original.datetime).getTime() || Date.now()
   };
 }
 
@@ -114,9 +164,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         if (rows && rows.length > 0) {
           const safeParse = (c: any) => {
-            if (typeof c === "object" && c !== null) return c;
+            if (typeof c === "object" && c !== null) return safeJsonValue(c);
             if (typeof c === "string") {
-              try { return JSON.parse(c); } catch { return c; }
+              try { return safeJsonValue(JSON.parse(c)); } catch { return c; }
             }
             return c;
           };
@@ -144,7 +194,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const hasMore = limit !== null && rows ? rows.length === limit : false;
 
-        res.status(200).json({ logs, books, settings, reviews, hasMore });
+        res.status(200).json(safeJsonValue({ logs, books, settings, reviews, hasMore }));
         break;
       }
 
@@ -164,7 +214,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             rowsToInsert.push({
               user_id: userId,
               entry_type: log.entryType || "log",
-              content: JSON.stringify(log),
+              content: safeJsonStringify(log),
               received_from: log.receivedFrom || "app",
               occurred_at: log.original?.datetime || new Date().toISOString()
             });
@@ -177,7 +227,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             rowsToInsert.push({
               user_id: userId,
               entry_type: "book",
-              content: JSON.stringify(book),
+              content: safeJsonStringify(book),
               received_from: "app",
               occurred_at: book.createdAt || new Date().toISOString()
             });
@@ -189,7 +239,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           rowsToInsert.push({
             user_id: userId,
             entry_type: "settings",
-            content: JSON.stringify(settings),
+            content: safeJsonStringify(settings),
             received_from: "app",
             occurred_at: new Date().toISOString()
           });
@@ -202,7 +252,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             rowsToInsert.push({
               user_id: userId,
               entry_type: "review",
-              content: JSON.stringify(rev),
+              content: safeJsonStringify(rev),
               received_from: "app",
               occurred_at: rev.generatedAt || new Date().toISOString()
             });

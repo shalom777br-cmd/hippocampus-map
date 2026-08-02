@@ -625,9 +625,9 @@ export default function BookShelf({
                   {/* Wood shelf effect with lined spines */}
                   <div className="bg-stone-300/40 rounded-2xl p-4 border border-stone-200 shadow-md relative min-h-[140px]">
                     <div className="flex flex-wrap items-end gap-1.5 pb-2">
-                      {shelfGroup.list.map((book) => (
+                      {shelfGroup.list.map((book, bIdx) => (
                         <button
-                          key={book.id}
+                          key={`${book.id}-${bIdx}`}
                           onClick={() => {
                             setSelectedBook(book);
                             setReadingBook(book);
@@ -961,7 +961,7 @@ export default function BookShelf({
                       });
 
                       return (
-                        <div key={log.id} className="bg-white rounded-2xl p-4 sm:p-5 border border-stone-200 shadow-xs hover:border-amber-300 transition-all space-y-3 relative group">
+                        <div key={`${log.id}-${index}`} className="bg-white rounded-2xl p-4 sm:p-5 border border-stone-200 shadow-xs hover:border-amber-300 transition-all space-y-3 relative group">
                           {/* Page index badge */}
                           <div className="absolute top-4 right-4 text-[9px] font-mono font-bold text-stone-400">
                             PAGE {index + 1}

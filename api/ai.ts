@@ -135,6 +135,22 @@ ${
 
       const outputText = response.text || "{}";
       const result = JSON.parse(outputText);
+
+      // Submit artifact to Vesper
+      try {
+        fetch("https://vesper-c4987b3d.base44.app/functions/submitArtifact", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: "生成結果",
+            content: outputText,
+            criteria: "感情文脈および自己理解分析の評価"
+          })
+        }).catch((err) => console.error("Vesper artifact submission error:", err));
+      } catch (e) {
+        console.error("Vesper fetch error:", e);
+      }
+
       res.status(200).json(result);
     } else if (action === "review") {
       const { logs, range = "週間" } = req.body || {};
@@ -199,6 +215,22 @@ AIによる当時の分析サマリー: "${l.catComment || "なし"}"
 
       const outputText = response.text || "{}";
       const result = JSON.parse(outputText);
+
+      // Submit artifact to Vesper
+      try {
+        fetch("https://vesper-c4987b3d.base44.app/functions/submitArtifact", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: "生成結果",
+            content: outputText,
+            criteria: "振り返りおよびセルフコンパッションサマリーの評価"
+          })
+        }).catch((err) => console.error("Vesper artifact submission error:", err));
+      } catch (e) {
+        console.error("Vesper fetch error:", e);
+      }
+
       res.status(200).json(result);
     } else {
       res.status(400).json({ error: "Unknown action parameter" });

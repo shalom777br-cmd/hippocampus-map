@@ -1165,9 +1165,9 @@ export default function AvatarSimulator({ logs, reviews, onAddManualLog, onToast
               <div className="grid grid-cols-2 gap-2.5 max-h-[340px] overflow-y-auto pr-1">
                 
                 {/* DEFAULT PRESETS */}
-                {DEFAULT_EVENTS.map((evt) => (
+                {DEFAULT_EVENTS.map((evt, idx) => (
                   <button
-                    key={evt.id}
+                    key={`${evt.id}-${idx}`}
                     type="button"
                     onClick={() => triggerEvent(evt.name, evt.deltas, evt.animation)}
                     className={`hover:brightness-95 border rounded-xl py-2 px-2.5 text-[11px] font-black flex items-center gap-2.5 cursor-pointer transition-all active:scale-95 text-left shadow-sm ${
@@ -1192,9 +1192,9 @@ export default function AvatarSimulator({ logs, reviews, onAddManualLog, onToast
                       ⭐ 自作したオリジナルイベント一覧 ({customEvents.length})
                     </span>
                     <div className="grid grid-cols-2 gap-2.5">
-                      {customEvents.map((evt) => (
+                      {customEvents.map((evt, idx) => (
                         <div 
-                          key={evt.id} 
+                          key={`${evt.id}-${idx}`} 
                           className="group relative bg-[#FDFCF9] border border-[#4A5D4E]/20 hover:border-[#4A5D4E]/40 rounded-xl py-2 pl-2.5 pr-8 flex items-center gap-2.5 transition-all text-left shadow-sm"
                         >
                           <button

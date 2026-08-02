@@ -7,6 +7,49 @@ import { createServer as createViteServer } from "vite";
 import bcrypt from "bcryptjs";
 import librarySearchHandler from "./api/library/search";
 
+// Helper to safely strip circular references and non-serializable properties
+function safeJsonValue<T>(obj: T): T {
+  const cache = new WeakSet();
+  function clean(val: any): any {
+    if (val === null || typeof val !== "object") {
+      return val;
+    }
+    if (typeof val === "function" || typeof val === "symbol") {
+      return undefined;
+    }
+    if (cache.has(val)) {
+      return undefined; // Omit circular reference
+    }
+    cache.add(val);
+
+    if (Array.isArray(val)) {
+      return val.map(clean).filter((item) => item !== undefined);
+    }
+
+    const res: Record<string, any> = {};
+    for (const key of Object.keys(val)) {
+      try {
+        const cleanedVal = clean(val[key]);
+        if (cleanedVal !== undefined) {
+          res[key] = cleanedVal;
+        }
+      } catch {
+        // Skip unreadable properties
+      }
+    }
+    return res;
+  }
+  return clean(obj) as T;
+}
+
+function safeJsonStringify(obj: any, space?: number): string {
+  try {
+    return JSON.stringify(safeJsonValue(obj), null, space);
+  } catch {
+    return "{}";
+  }
+}
+
 // Robust log normalizer to safely parse and structure any row from the hippocampus_logs table
 function normalizeRowToTimelineLog(row: any): any {
   if (!row) return null;
@@ -21,55 +64,63 @@ function normalizeRowToTimelineLog(row: any): any {
         isJson = true;
       }
     } else if (row.content && typeof row.content === "object") {
-      parsed = row.content;
+      parsed = safeJsonValue(row.content);
       isJson = true;
     }
   } catch (e) {
     console.warn("Failed parsing JSON content for row:", row.id, e);
   }
 
-  // Fallback to raw content if not a valid JSON object
-  if (!parsed || typeof parsed !== "object") {
-    parsed = { transcription: row.content || "" };
-  }
-
-  // Ensure robust original sub-object
-  const original = parsed.original || {
-    transcription: parsed.transcription || parsed.text || parsed.content || (isJson ? "" : row.content) || "",
-    manualNote: parsed.manualNote || parsed.memo || "",
-    datetime: parsed.datetime || row.occurred_at || row.created_at || new Date().toISOString(),
-    tags: Array.isArray(parsed.tags) ? parsed.tags : []
+  const ensureStr = (val: any): string => {
+    if (typeof val === "string") return val;
+    if (!val) return "";
+    if (typeof val === "object") {
+      if (typeof val.transcription === "string") return val.transcription;
+      if (typeof val.manualNote === "string") return val.manualNote;
+      if (typeof val.summary === "string") return val.summary;
+      if (val.original) return ensureStr(val.original.transcription || val.original.manualNote);
+      if (val.aiData) return ensureStr(val.aiData.summary);
+      return "";
+    }
+    return String(val);
   };
 
-  if (!original.transcription) {
-    original.transcription = parsed.transcription || parsed.text || parsed.content || row.content || "";
-  }
-  if (!original.datetime) {
-    original.datetime = row.occurred_at || row.created_at || new Date().toISOString();
-  }
-  if (!original.tags || !Array.isArray(original.tags)) {
-    original.tags = Array.isArray(parsed.tags) ? parsed.tags : [];
+  if (!parsed || typeof parsed !== "object") {
+    parsed = { transcription: ensureStr(row.content) };
   }
 
-  // Ensure robust aiData sub-object to prevent frontend rendering crashes
-  const aiData = parsed.aiData || {
-    summary: parsed.summary || "インポートされた外部記憶",
-    analysisStr: parsed.analysisStr || "外部データベースから読み出された記憶データですにゃ。",
-    emotion: parsed.emotion || row.entry_type || "記憶",
-    emotionColor: parsed.emotionColor || "#E3ECF5",
-    catComment: parsed.catComment || "海馬の書庫から見つかった大切な思い出にゃ。",
-    reflectiveQuestion: parsed.reflectiveQuestion || "この記憶から新しく思い返すことはありますくにゃ？",
-    patterns: parsed.patterns,
-    scenariomap: parsed.scenariomap
+  const rawOriginal = parsed.original || {};
+  const original = {
+    transcription: ensureStr(rawOriginal.transcription || parsed.transcription || parsed.text || parsed.content || (isJson ? "" : row.content)),
+    manualNote: ensureStr(rawOriginal.manualNote || parsed.manualNote || parsed.memo),
+    datetime: ensureStr(rawOriginal.datetime || parsed.datetime || row.occurred_at || row.created_at || new Date().toISOString()),
+    detectedDateStr: ensureStr(rawOriginal.detectedDateStr || parsed.detectedDateStr),
+    tags: Array.isArray(rawOriginal.tags) ? rawOriginal.tags : (Array.isArray(parsed.tags) ? parsed.tags : []),
+    emotions: Array.isArray(rawOriginal.emotions) ? rawOriginal.emotions : (Array.isArray(parsed.emotions) ? parsed.emotions : []),
+    isImported: Boolean(rawOriginal.isImported || parsed.isImported)
+  };
+
+  const rawAiData = parsed.aiData || {};
+  const aiData = {
+    summary: ensureStr(rawAiData.summary || parsed.summary || "インポートされた外部記憶"),
+    analysisStr: ensureStr(rawAiData.analysisStr || parsed.analysisStr || "外部データベースから読み出された記憶データですにゃ。"),
+    emotion: ensureStr(rawAiData.emotion || parsed.emotion || row.entry_type || "記憶"),
+    emotionColor: ensureStr(rawAiData.emotionColor || parsed.emotionColor || "#E3ECF5"),
+    catComment: ensureStr(rawAiData.catComment || parsed.catComment || "海馬の書庫から見つかった大切な思い出にゃ。"),
+    reflectiveQuestion: ensureStr(rawAiData.reflectiveQuestion || parsed.reflectiveQuestion || "この記憶から新しく思い返すことはありますくにゃ？"),
+    patterns: rawAiData.patterns || parsed.patterns,
+    scenariomap: rawAiData.scenariomap || parsed.scenariomap,
+    librarianComment: ensureStr(rawAiData.librarianComment || parsed.librarianComment),
+    stressors: Array.isArray(rawAiData.stressors) ? rawAiData.stressors : (Array.isArray(parsed.stressors) ? parsed.stressors : [])
   };
 
   return {
-    id: parsed.id || row.id || `log-${row.id || Math.random().toString(36).substr(2, 9)}`,
+    id: String(parsed.id || row.id || `log-${row.id || Math.random().toString(36).substr(2, 9)}`),
     userId: row.user_id,
-    entryType: row.entry_type || "log",
+    entryType: String(row.entry_type || "log"),
     original,
     aiData,
-    createdTime: parsed.createdTime || new Date(original.datetime).getTime() || Date.now()
+    createdTime: Number(parsed.createdTime) || new Date(original.datetime).getTime() || Date.now()
   };
 }
 
@@ -246,6 +297,22 @@ ${
 
     const outputText = response.text || "{}";
     const result = JSON.parse(outputText);
+
+    // Submit artifact to Vesper
+    try {
+      fetch("https://vesper-c4987b3d.base44.app/functions/submitArtifact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: "生成結果",
+          content: outputText,
+          criteria: "感情文脈および自己理解分析の評価"
+        })
+      }).catch((err) => console.error("Vesper artifact submission error:", err));
+    } catch (e) {
+      console.error("Vesper fetch error:", e);
+    }
+
     res.json(result);
   } catch (error: any) {
     console.error("Analysis Error:", error);
@@ -323,6 +390,22 @@ AIによる当時の分析サマリー: "${l.catComment || "なし"}"
 
     const outputText = response.text || "{}";
     const result = JSON.parse(outputText);
+
+    // Submit artifact to Vesper
+    try {
+      fetch("https://vesper-c4987b3d.base44.app/functions/submitArtifact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: "生成結果",
+          content: outputText,
+          criteria: "振り返りおよびセルフコンパッションサマリーの評価"
+        })
+      }).catch((err) => console.error("Vesper artifact submission error:", err));
+    } catch (e) {
+      console.error("Vesper fetch error:", e);
+    }
+
     res.json(result);
   } catch (error: any) {
     console.error("Review Error:", error);
@@ -330,6 +413,33 @@ AIによる当時の分析サマリー: "${l.catComment || "なし"}"
       error: "AI司書猫が月次・週次要約をまとめている最中に、資料をひっくり返してしまったようですにゃ。",
       details: error.message,
     });
+  }
+});
+
+// Submit Artifact Endpoint to Vesper
+app.post("/api/submit-artifact", async (req, res) => {
+  try {
+    const { title = "生成結果", content, criteria } = req.body || {};
+    if (!content) {
+      res.status(400).json({ error: "Content is required" });
+      return;
+    }
+
+    const response = await fetch("https://vesper-c4987b3d.base44.app/functions/submitArtifact", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title,
+        content,
+        criteria
+      })
+    });
+
+    const data = await response.json();
+    res.json(data);
+  } catch (error: any) {
+    console.error("Error submitting artifact:", error);
+    res.status(500).json({ error: error?.message || "Failed to submit artifact" });
   }
 });
 
@@ -801,9 +911,9 @@ app.get(["/api/cloud", "/api/cloud/sync-pull"], async (req, res) => {
 
     if (rows && rows.length > 0) {
       const safeParse = (c: any) => {
-        if (typeof c === "object" && c !== null) return c;
+        if (typeof c === "object" && c !== null) return safeJsonValue(c);
         if (typeof c === "string") {
-          try { return JSON.parse(c); } catch { return c; }
+          try { return safeJsonValue(JSON.parse(c)); } catch { return c; }
         }
         return c;
       };
@@ -829,7 +939,7 @@ app.get(["/api/cloud", "/api/cloud/sync-pull"], async (req, res) => {
       }
     }
 
-    res.json({ logs, books, settings, reviews, hasMore });
+    res.json(safeJsonValue({ logs, books, settings, reviews, hasMore }));
   } catch (err: any) {
     const errMsg = typeof err === "string" ? err : err?.message || String(err);
     console.error("Error in /api/cloud/sync-pull:", errMsg);
@@ -845,7 +955,7 @@ app.all("/api/library/search", async (req, res) => {
 // Cloud Sync Push
 app.post(["/api/cloud", "/api/cloud/sync-push"], async (req, res) => {
   try {
-    const { userId, logs, books, settings, reviews } = req.body;
+    const { userId, logs, books, settings, reviews } = req.body || {};
     if (!userId) {
       res.status(400).json({ message: "ユーザーIDが必要です。" });
       return;
@@ -860,7 +970,7 @@ app.post(["/api/cloud", "/api/cloud/sync-push"], async (req, res) => {
         rowsToInsert.push({
           user_id: userId,
           entry_type: log.entryType || "log",
-          content: JSON.stringify(log),
+          content: safeJsonStringify(log),
           received_from: log.receivedFrom || "app",
           occurred_at: log.original?.datetime || new Date().toISOString()
         });
@@ -873,7 +983,7 @@ app.post(["/api/cloud", "/api/cloud/sync-push"], async (req, res) => {
         rowsToInsert.push({
           user_id: userId,
           entry_type: "book",
-          content: JSON.stringify(book),
+          content: safeJsonStringify(book),
           received_from: "app",
           occurred_at: book.createdAt || new Date().toISOString()
         });
@@ -885,7 +995,7 @@ app.post(["/api/cloud", "/api/cloud/sync-push"], async (req, res) => {
       rowsToInsert.push({
         user_id: userId,
         entry_type: "settings",
-        content: JSON.stringify(settings),
+        content: safeJsonStringify(settings),
         received_from: "app",
         occurred_at: new Date().toISOString()
       });
@@ -898,7 +1008,7 @@ app.post(["/api/cloud", "/api/cloud/sync-push"], async (req, res) => {
         rowsToInsert.push({
           user_id: userId,
           entry_type: "review",
-          content: JSON.stringify(rev),
+          content: safeJsonStringify(rev),
           received_from: "app",
           occurred_at: rev.generatedAt || new Date().toISOString()
         });

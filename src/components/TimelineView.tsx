@@ -168,14 +168,14 @@ export default function TimelineView({
     }
   }, [logs.length, todayLogs.length, pastLogs.length]);
 
-  const renderLogItem = (log: TimelineLog, isPast: boolean) => {
+  const renderLogItem = (log: TimelineLog, isPast: boolean, index: number) => {
     const isActive = activeLogId === log.id;
     const original = log.original;
     const aiData = log.aiData;
 
     return (
       <div
-        key={log.id}
+        key={`${log.id}-${index}`}
         id={`log-item-${log.id}`}
         className={`bg-white border transition-all duration-300 text-left ${
           isPast ? "p-3.5 rounded-2xl shadow-2xs" : "p-5 rounded-3xl shadow-[0_2px_8px_rgba(0,0,0,0.015)]"
@@ -750,7 +750,7 @@ export default function TimelineView({
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {todayLogs.map(log => renderLogItem(log, false))}
+                  {todayLogs.map((log, idx) => renderLogItem(log, false, idx))}
                 </div>
               )}
             </div>
@@ -811,7 +811,7 @@ export default function TimelineView({
                 </div>
               ) : (
                 <div className="space-y-2.5">
-                  {pastLogs.map(log => renderLogItem(log, true))}
+                  {pastLogs.map((log, idx) => renderLogItem(log, true, idx))}
                 </div>
               )}
             </div>

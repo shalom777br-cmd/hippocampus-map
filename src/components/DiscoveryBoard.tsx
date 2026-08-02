@@ -649,8 +649,8 @@ export default function DiscoveryBoard({
                 <div className="border-t border-stone-100 pt-3 space-y-2">
                   <p className="text-[10px] text-stone-500 font-bold">📖 最近の史実データベース記録から一部抜粋：</p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {supabaseEvents.slice(0, 4).map((ev: any) => (
-                      <div key={ev.id} className="p-2.5 bg-stone-50/50 hover:bg-stone-50 transition-all border border-stone-200 rounded-xl space-y-1">
+                    {supabaseEvents.slice(0, 4).map((ev: any, idx: number) => (
+                      <div key={`${ev.id || idx}-${idx}`} className="p-2.5 bg-stone-50/50 hover:bg-stone-50 transition-all border border-stone-200 rounded-xl space-y-1">
                         <div className="flex justify-between items-center text-[9px]">
                           <span className="font-mono text-stone-400 font-bold">{ev.era} {ev.header_date_text}</span>
                           <span className="px-1.5 py-0.2 bg-[#4A5D4E]/10 text-[#4A5D4E] font-bold rounded">

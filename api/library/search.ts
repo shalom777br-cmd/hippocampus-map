@@ -1,6 +1,48 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createClient } from "@supabase/supabase-js";
 
+function safeJsonValue<T>(obj: T): T {
+  const cache = new WeakSet();
+  function clean(val: any): any {
+    if (val === null || typeof val !== "object") {
+      return val;
+    }
+    if (typeof val === "function" || typeof val === "symbol") {
+      return undefined;
+    }
+    if (cache.has(val)) {
+      return undefined;
+    }
+    cache.add(val);
+
+    if (Array.isArray(val)) {
+      return val.map(clean).filter((item) => item !== undefined);
+    }
+
+    const res: Record<string, any> = {};
+    for (const key of Object.keys(val)) {
+      try {
+        const cleanedVal = clean(val[key]);
+        if (cleanedVal !== undefined) {
+          res[key] = cleanedVal;
+        }
+      } catch {
+        // Skip
+      }
+    }
+    return res;
+  }
+  return clean(obj) as T;
+}
+
+function safeJsonStringify(obj: any, space?: number): string {
+  try {
+    return JSON.stringify(safeJsonValue(obj), null, space);
+  } catch {
+    return "{}";
+  }
+}
+
 function getSupabaseClient() {
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "";
   const supabaseServiceKey =
@@ -218,16 +260,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           data.forEach(row => {
             let contentStr = "";
             let title = row.entry_type || "タイムライン記憶";
+            let parsedObj: any = row.content;
+
             if (typeof row.content === "string") {
-              contentStr = row.content;
-            } else if (typeof row.content === "object" && row.content !== null) {
-              contentStr =
-                row.content.original?.transcription ||
-                row.content.aiData?.summary ||
-                JSON.stringify(row.content);
-              if (row.content.aiData?.summary) {
-                title = row.content.aiData.summary;
+              try {
+                parsedObj = JSON.parse(row.content);
+              } catch {
+                parsedObj = row.content;
               }
+            }
+
+            if (parsedObj && typeof parsedObj === "object") {
+              contentStr =
+                parsedObj.original?.transcription ||
+                parsedObj.original?.manualNote ||
+                parsedObj.aiData?.summary ||
+                safeJsonStringify(parsedObj);
+              if (parsedObj.aiData?.summary) {
+                title = parsedObj.aiData.summary;
+              }
+            } else {
+              contentStr = String(parsedObj || "");
             }
             const matchCount = countMatches(contentStr + " " + title, keywords);
 
@@ -260,12 +313,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return timeB - timeA;
     });
 
-    res.status(200).json({
+    res.status(200).json(safeJsonValue({
       query: queryStr,
       keywords,
       total: results.length,
       results
-    });
+    }));
   } catch (error: any) {
     const errMsg = typeof error === "string" ? error : error?.message || String(error);
     console.error("Library Search error:", errMsg);

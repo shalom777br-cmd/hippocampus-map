@@ -2635,7 +2635,7 @@ create policy "Users can manage graph edges" on public.graph_edges for all using
                       const matchingLog = logs.find(l => l.id === id);
                       return (
                         <div
-                          key={id}
+                          key={`${id}-${index}`}
                           className={`p-3.5 rounded-2xl border text-xs transition-all duration-200 flex flex-col md:flex-row md:items-center justify-between gap-3 ${
                             matchingLog
                               ? "bg-[#FAF9F5]/70 hover:bg-[#FAF9F5] border-amber-900/10"
@@ -2674,7 +2674,11 @@ create policy "Users can manage graph edges" on public.graph_edges for all using
                             {/* Content preview */}
                             {matchingLog ? (
                               <p className="text-stone-800 font-semibold truncate leading-relaxed text-[11px] max-w-2xl break-all">
-                                {matchingLog.original.transcription || matchingLog.aiData?.summary || "（中身がありません）"}
+                                {(typeof matchingLog.original?.transcription === "string" && matchingLog.original.transcription)
+                                  ? matchingLog.original.transcription
+                                  : (typeof matchingLog.aiData?.summary === "string" && matchingLog.aiData.summary)
+                                  ? matchingLog.aiData.summary
+                                  : "（中身がありません）"}
                               </p>
                             ) : (
                               <p className="text-stone-400 italic text-[11px] leading-relaxed">
@@ -3188,14 +3192,14 @@ create policy "Users can manage graph edges" on public.graph_edges for all using
                     </div>
                   ) : (
                     <div className="relative border-l border-stone-200 ml-4 pl-4 space-y-6">
-                      {rangeLogs.map((log) => {
+                      {rangeLogs.map((log, index) => {
                         const dateObj = new Date(log.original.datetime);
                         const days = ["日", "月", "火", "水", "木", "金", "土"];
                         const dayStr = days[dateObj.getDay()];
                         const dateString = `${dateObj.getMonth() + 1}/${dateObj.getDate()} (${dayStr}) ${dateObj.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}`;
 
                         return (
-                          <div key={log.id} className="relative space-y-1.5 print-break-inside-none">
+                          <div key={`${log.id}-${index}`} className="relative space-y-1.5 print-break-inside-none">
                             {/* Dot indicator */}
                             <div className="absolute -left-[21.5px] top-1 w-2.5 h-2.5 rounded-full bg-stone-500 border-2 border-white"></div>
                             
@@ -3346,7 +3350,7 @@ create policy "Users can manage graph edges" on public.graph_edges for all using
 
             {/* Page Main Content Area (A4 height space) */}
             <div className="flex-1 mt-6 mb-6 space-y-6 flex flex-col justify-start">
-              {chunk.map((log) => {
+              {chunk.map((log, index) => {
                 const emotionText = log.aiData?.emotion || "平穏";
                 const emotionColor = log.aiData?.emotionColor || "#90A4AE";
                 const displayDate = log.original && log.original.detectedDateStr
@@ -3363,7 +3367,7 @@ create policy "Users can manage graph edges" on public.graph_edges for all using
                 
                 return (
                   <div 
-                    key={log.id} 
+                    key={`${log.id}-${index}`} 
                     className={`flex-1 flex flex-col justify-between p-6 rounded-2xl border transition-all ${
                       pdfTemplateStyle === "washo" 
                         ? "bg-[#FAF8F4]/80 border-amber-900/10" 

@@ -45,17 +45,21 @@ export default function SearchManager({ logs, books, user, onSelectLog, showToas
       // 1. Search local timeline logs
       if (filterType === "all" || filterType === "timeline") {
         logs.forEach((log) => {
-          const titleText = log.aiData?.summary || log.original.detectedDateStr || "無題の記憶";
-          const summaryText = log.aiData?.summary || log.original.manualNote || log.original.transcription;
-          const bodyText = `${log.original.manualNote} ${log.original.transcription} ${log.aiData?.analysisStr || ""}`;
-          const primaryCategoryText = log.aiData?.emotion || "未分類";
-          const categoriesList = log.original.tags || [];
-          const dateLabelText = log.original.detectedDateStr || (log.original.datetime ? new Date(log.original.datetime).toLocaleString() : "時期不詳");
+          const titleText = (typeof log.aiData?.summary === "string" && log.aiData.summary) ? log.aiData.summary : (typeof log.original?.detectedDateStr === "string" ? log.original.detectedDateStr : "無題の記憶");
+          const rawSummary = log.aiData?.summary || log.original?.manualNote || log.original?.transcription;
+          const summaryText = typeof rawSummary === "string" ? rawSummary : (rawSummary && typeof rawSummary === "object" ? ((rawSummary as any).original?.transcription || (rawSummary as any).original?.manualNote || (rawSummary as any).aiData?.summary || JSON.stringify(rawSummary)) : String(rawSummary || ""));
+          const manualNote = typeof log.original?.manualNote === "string" ? log.original.manualNote : "";
+          const transcription = typeof log.original?.transcription === "string" ? log.original.transcription : "";
+          const analysisStr = typeof log.aiData?.analysisStr === "string" ? log.aiData.analysisStr : "";
+          const bodyText = `${manualNote} ${transcription} ${analysisStr}`;
+          const primaryCategoryText = typeof log.aiData?.emotion === "string" ? log.aiData.emotion : "未分類";
+          const categoriesList = Array.isArray(log.original?.tags) ? log.original.tags : [];
+          const dateLabelText = typeof log.original?.detectedDateStr === "string" ? log.original.detectedDateStr : (log.original?.datetime ? new Date(log.original.datetime).toLocaleString() : "時期不詳");
 
           const textToSearch = `${titleText} ${summaryText} ${bodyText} ${primaryCategoryText} ${categoriesList.join(" ")}`.toLowerCase();
           if (textToSearch.includes(cleanQuery)) {
             found.push({
-              id: log.id,
+              id: String(log.id),
               type: "timeline",
               title: titleText,
               subtitle: primaryCategoryText,
@@ -208,9 +212,9 @@ export default function SearchManager({ logs, books, user, onSelectLog, showToas
             </div>
 
             <div className="grid grid-cols-1 gap-3">
-              {results.map((result) => (
+              {results.map((result, rIdx) => (
                 <div
-                  key={result.id}
+                  key={`${result.id}-${rIdx}`}
                   className="bg-white hover:bg-[#FCFBF8] rounded-2xl p-5 border border-stone-200/60 hover:border-[#81C784]/40 shadow-2xs hover:shadow-xs transition-all flex flex-col md:flex-row justify-between gap-4"
                 >
                   <div className="space-y-2 flex-1">
@@ -225,7 +229,9 @@ export default function SearchManager({ logs, books, user, onSelectLog, showToas
                       }`}>
                         {result.type === "timeline" ? "タイムライン" : result.type === "book" ? "書物" : "DBイベント"}
                       </span>
-                      <h4 className="font-serif font-black text-[21px] text-stone-800">{result.title}</h4>
+                      <h4 className="font-serif font-black text-[21px] text-stone-800">
+                        {typeof result.title === "string" ? result.title : String(result.title || "")}
+                      </h4>
                     </div>
 
                     {/* Meta subtitle */}
@@ -237,12 +243,16 @@ export default function SearchManager({ logs, books, user, onSelectLog, showToas
                         </span>
                       )}
                       <span>•</span>
-                      <span>{result.subtitle}</span>
+                      <span>{typeof result.subtitle === "string" ? result.subtitle : String(result.subtitle || "")}</span>
                     </p>
 
                     {/* Excerpt content */}
                     <p className="text-stone-600 text-[18px] leading-relaxed font-medium line-clamp-3">
-                      {result.content}
+                      {typeof result.content === "string"
+                        ? result.content
+                        : (result.content && typeof result.content === "object"
+                            ? ((result.content as any).original?.transcription || (result.content as any).original?.manualNote || (result.content as any).aiData?.summary || JSON.stringify(result.content))
+                            : String(result.content || ""))}
                     </p>
 
                     {/* Tags list */}

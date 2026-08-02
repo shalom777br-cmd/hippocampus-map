@@ -25,48 +25,56 @@ export function normalizeRowToTimelineLog(row: any): TimelineLog | null {
     console.warn("Failed parsing JSON content for row:", row.id, e);
   }
 
-  // Fallback to raw content if not a valid JSON object
-  if (!parsed || typeof parsed !== "object") {
-    parsed = { transcription: row.content || "" };
-  }
-
-  // Ensure robust original sub-object
-  const original = parsed.original || {
-    transcription: parsed.transcription || parsed.text || parsed.content || (isJson ? "" : row.content) || "",
-    manualNote: parsed.manualNote || parsed.memo || "",
-    datetime: parsed.datetime || row.occurred_at || row.created_at || new Date().toISOString(),
-    tags: Array.isArray(parsed.tags) ? parsed.tags : []
+  const ensureStr = (val: any): string => {
+    if (typeof val === "string") return val;
+    if (!val) return "";
+    if (typeof val === "object") {
+      if (typeof val.transcription === "string") return val.transcription;
+      if (typeof val.manualNote === "string") return val.manualNote;
+      if (typeof val.summary === "string") return val.summary;
+      if (val.original) return ensureStr(val.original.transcription || val.original.manualNote);
+      if (val.aiData) return ensureStr(val.aiData.summary);
+      return "";
+    }
+    return String(val);
   };
 
-  if (!original.transcription) {
-    original.transcription = parsed.transcription || parsed.text || parsed.content || row.content || "";
-  }
-  if (!original.datetime) {
-    original.datetime = row.occurred_at || row.created_at || new Date().toISOString();
-  }
-  if (!original.tags || !Array.isArray(original.tags)) {
-    original.tags = Array.isArray(parsed.tags) ? parsed.tags : [];
+  if (!parsed || typeof parsed !== "object") {
+    parsed = { transcription: ensureStr(row.content) };
   }
 
-  // Ensure robust aiData sub-object to prevent frontend rendering crashes
-  const aiData = parsed.aiData || {
-    summary: parsed.summary || "インポートされた外部記憶",
-    analysisStr: parsed.analysisStr || "外部データベースから読み出された記憶データですにゃ。",
-    emotion: parsed.emotion || row.entry_type || "記憶",
-    emotionColor: parsed.emotionColor || "#E3ECF5",
-    catComment: parsed.catComment || "海馬の書庫から見つかった大切な思い出にゃ。",
-    reflectiveQuestion: parsed.reflectiveQuestion || "この記憶から新しく思い返すことはありますくにゃ？",
-    patterns: parsed.patterns,
-    scenariomap: parsed.scenariomap
+  const rawOriginal = parsed.original || {};
+  const original = {
+    transcription: ensureStr(rawOriginal.transcription || parsed.transcription || parsed.text || parsed.content || (isJson ? "" : row.content)),
+    manualNote: ensureStr(rawOriginal.manualNote || parsed.manualNote || parsed.memo),
+    datetime: ensureStr(rawOriginal.datetime || parsed.datetime || row.occurred_at || row.created_at || new Date().toISOString()),
+    detectedDateStr: ensureStr(rawOriginal.detectedDateStr || parsed.detectedDateStr),
+    tags: Array.isArray(rawOriginal.tags) ? rawOriginal.tags : (Array.isArray(parsed.tags) ? parsed.tags : []),
+    emotions: Array.isArray(rawOriginal.emotions) ? rawOriginal.emotions : (Array.isArray(parsed.emotions) ? parsed.emotions : []),
+    isImported: Boolean(rawOriginal.isImported || parsed.isImported)
+  };
+
+  const rawAiData = parsed.aiData || {};
+  const aiData = {
+    summary: ensureStr(rawAiData.summary || parsed.summary || "インポートされた外部記憶"),
+    analysisStr: ensureStr(rawAiData.analysisStr || parsed.analysisStr || "外部データベースから読み出された記憶データですにゃ。"),
+    emotion: ensureStr(rawAiData.emotion || parsed.emotion || row.entry_type || "記憶"),
+    emotionColor: ensureStr(rawAiData.emotionColor || parsed.emotionColor || "#E3ECF5"),
+    catComment: ensureStr(rawAiData.catComment || parsed.catComment || "海馬の書庫から見つかった大切な思い出にゃ。"),
+    reflectiveQuestion: ensureStr(rawAiData.reflectiveQuestion || parsed.reflectiveQuestion || "この記憶から新しく思い返すことはありますくにゃ？"),
+    patterns: rawAiData.patterns || parsed.patterns,
+    scenariomap: rawAiData.scenariomap || parsed.scenariomap,
+    librarianComment: ensureStr(rawAiData.librarianComment || parsed.librarianComment),
+    stressors: Array.isArray(rawAiData.stressors) ? rawAiData.stressors : (Array.isArray(parsed.stressors) ? parsed.stressors : [])
   };
 
   return {
-    id: parsed.id || row.id || `log-${row.id || Math.random().toString(36).substr(2, 9)}`,
+    id: String(parsed.id || row.id || `log-${row.id || Math.random().toString(36).substr(2, 9)}`),
     userId: row.user_id,
-    entryType: row.entry_type || "log",
+    entryType: String(row.entry_type || "log"),
     original,
     aiData,
-    createdTime: parsed.createdTime || new Date(original.datetime).getTime() || Date.now()
+    createdTime: Number(parsed.createdTime) || new Date(original.datetime).getTime() || Date.now()
   };
 }
 

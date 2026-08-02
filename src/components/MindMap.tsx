@@ -153,14 +153,31 @@ export default function MindMap({ user, showToast }: MindMapProps) {
     setActiveTab("map");
   };
 
-  const handleCopyText = (text: string, id: string) => {
-    navigator.clipboard.writeText(text);
+  const handleCopyText = (text: any, id: string) => {
+    let strToCopy = "";
+    if (typeof text === "string") {
+      strToCopy = text;
+    } else if (text && typeof text === "object") {
+      strToCopy = text.original?.transcription || text.original?.manualNote || text.aiData?.summary || JSON.stringify(text);
+    } else {
+      strToCopy = String(text || "");
+    }
+    navigator.clipboard.writeText(strToCopy);
     setCopiedId(id);
     showToast("テキストをクリップボードにコピーしたにゃ！", "success");
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const renderHighlightedText = (text: string, keywords: string[]) => {
+  const renderHighlightedText = (rawText: any, keywords: string[]) => {
+    let text = "";
+    if (typeof rawText === "string") {
+      text = rawText;
+    } else if (rawText && typeof rawText === "object") {
+      text = rawText.original?.transcription || rawText.original?.manualNote || rawText.aiData?.summary || JSON.stringify(rawText);
+    } else {
+      text = String(rawText || "");
+    }
+
     if (!text || !keywords || keywords.length === 0) return text;
     const pattern = keywords
       .map(k => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
@@ -1021,7 +1038,7 @@ export default function MindMap({ user, showToast }: MindMapProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
               {searchResults
                 .filter(r => selectedSourceFilter === "all" || r.source === selectedSourceFilter)
-                .map(item => {
+                .map((item, idx) => {
                   let sourceBadgeStyle = "bg-stone-100 text-stone-700 border-stone-200";
                   if (item.source === "claude_chat_history") {
                     sourceBadgeStyle = "bg-purple-100 text-purple-800 border-purple-200";
@@ -1043,7 +1060,7 @@ export default function MindMap({ user, showToast }: MindMapProps) {
 
                   return (
                     <div
-                      key={`${item.source}-${item.id}`}
+                      key={`${item.source}-${item.id}-${idx}`}
                       onClick={() => setSelectedDetailItem(item)}
                       className="bg-white p-4 rounded-2xl border border-stone-200 shadow-2xs hover:shadow-md hover:border-[#81C784] transition-all cursor-pointer flex flex-col justify-between space-y-3 group text-left"
                     >
