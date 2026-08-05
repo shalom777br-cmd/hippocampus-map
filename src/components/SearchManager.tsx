@@ -92,31 +92,37 @@ export default function SearchManager({ logs, books, user, onSelectLog, showToas
         });
       }
 
-      // 3. Search Supabase remote events if configured
-      if ((filterType === "all" || filterType === "db") && isRealSupabaseConfigured && realSupabase) {
-        // Query memory_timeline_events using ILIKE
-        const { data, error } = await realSupabase
-          .from("memory_timeline_events")
-          .select("*")
-          .or(`title.ilike.%${cleanQuery}%,summary.ilike.%${cleanQuery}%,body.ilike.%${cleanQuery}%`)
-          .limit(15);
-
-        if (!error && data) {
-          data.forEach((item: any) => {
-            // Avoid adding duplicates if already in timeline logs list
-            if (!found.some(f => f.id === item.id)) {
-              found.push({
-                id: item.id,
-                type: "supabase_event",
-                title: item.title || "無題のイベント",
-                subtitle: `データベース: ${item.primary_category || "未分類"}`,
-                content: item.summary || item.body || "",
-                dateLabel: item.header_date_text || item.approximate_date || `${item.year_label || item.year || ""}`,
-                tags: item.categories ? (typeof item.categories === "string" ? JSON.parse(item.categories) : item.categories) : [],
-                originalItem: item
+      // 3. Search remote events via /api/library/search endpoint (service-role privileged)
+      if (filterType === "all" || filterType === "db") {
+        try {
+          const apiRes = await fetch("/api/library/search", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query: cleanQuery })
+          });
+          if (apiRes.ok) {
+            const apiData = await apiRes.json();
+            if (apiData?.results && Array.isArray(apiData.results)) {
+              apiData.results.forEach((item: any) => {
+                if (item.source === "memory_timeline_events") {
+                  if (!found.some(f => f.id === String(item.id))) {
+                    found.push({
+                      id: String(item.id),
+                      type: "supabase_event",
+                      title: item.title || "無題のイベント",
+                      subtitle: `データベース: ${item.category || "未分類"}`,
+                      content: item.content || item.snippet || "",
+                      dateLabel: item.occurred_at || item.created_at || "",
+                      tags: item.extra?.categories ? (Array.isArray(item.extra.categories) ? item.extra.categories : [String(item.extra.categories)]) : [],
+                      originalItem: item
+                    });
+                  }
+                }
               });
             }
-          });
+          }
+        } catch (apiErr) {
+          console.warn("Failed fetching from /api/library/search in SearchManager:", apiErr);
         }
       }
 

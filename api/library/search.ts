@@ -127,9 +127,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (handleCors(req, res)) return;
 
   try {
-    const queryStr = (req.method === "POST" ? req.body?.query : req.query.query || req.query.q) || "";
+    let body = req.body;
+    if (typeof body === "string") {
+      try {
+        body = JSON.parse(body);
+      } catch {
+        // Leave as is
+      }
+    }
+
+    const queryStr =
+      (req.method === "POST" ? (body?.query || body?.q) : (req.query?.query || req.query?.q)) ||
+      req.query?.query ||
+      req.query?.q ||
+      "";
     const targetUserId =
-      (req.method === "POST" ? req.body?.userId : req.query.userId) ||
+      (req.method === "POST" ? body?.userId : req.query?.userId) ||
       "5fb13a09-5ce3-4aec-bb4e-8e357070b76b";
 
     if (!queryStr || typeof queryStr !== "string" || !queryStr.trim()) {
@@ -300,6 +313,89 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       } catch (err) {
         console.warn("Error querying hippocampus_logs:", err);
+      }
+
+      // 5. memory_timeline_events
+      try {
+        let q = supabase.from("memory_timeline_events").select("*");
+        for (const kw of keywords) {
+          const cleanKw = kw.replace(/['"%\\]/g, "");
+          if (cleanKw) {
+            q = q.or(
+              `title.ilike.%${cleanKw}%,summary.ilike.%${cleanKw}%,body.ilike.%${cleanKw}%,raw_text.ilike.%${cleanKw}%,primary_category.ilike.%${cleanKw}%`
+            );
+          }
+        }
+        const { data, error } = await q.limit(100);
+        if (!error && data) {
+          data.forEach(row => {
+            const title = row.title || "無題のイベント";
+            const content = row.summary || row.body || row.raw_text || "";
+            const primaryCategory = row.primary_category || "DBイベント";
+            const fullText = `${title} ${content} ${primaryCategory} ${row.categories || ""} ${row.era || ""} ${row.year_label || ""}`;
+            const matchCount = countMatches(fullText, keywords);
+
+            results.push({
+              id: row.id,
+              source: "memory_timeline_events",
+              sourceLabel: "タイムラインイベント",
+              title,
+              category: primaryCategory,
+              content,
+              snippet: generateSnippet(content || title, keywords),
+              occurred_at: row.approximate_date || row.header_date_text || row.event_date || row.created_at,
+              created_at: row.created_at,
+              match_count: matchCount,
+              extra: {
+                era: row.era,
+                year_label: row.year_label,
+                year: row.year,
+                header_date_text: row.header_date_text,
+                approximate_date: row.approximate_date,
+                categories: row.categories,
+                locations: row.locations
+              }
+            });
+          });
+        } else if (error) {
+          console.warn("Supabase query memory_timeline_events error, trying fallback select:", error.message);
+          const { data: fallbackData } = await supabase.from("memory_timeline_events").select("*").limit(100);
+          if (fallbackData) {
+            fallbackData.forEach(row => {
+              const title = row.title || "無題のイベント";
+              const content = row.summary || row.body || row.raw_text || "";
+              const primaryCategory = row.primary_category || "DBイベント";
+              const fullText = `${title} ${content} ${primaryCategory} ${row.categories || ""} ${row.era || ""} ${row.year_label || ""}`;
+              const matchCount = countMatches(fullText, keywords);
+
+              if (matchCount > 0) {
+                results.push({
+                  id: row.id,
+                  source: "memory_timeline_events",
+                  sourceLabel: "タイムラインイベント",
+                  title,
+                  category: primaryCategory,
+                  content,
+                  snippet: generateSnippet(content || title, keywords),
+                  occurred_at: row.approximate_date || row.header_date_text || row.event_date || row.created_at,
+                  created_at: row.created_at,
+                  match_count: matchCount,
+                  extra: {
+                    era: row.era,
+                    year_label: row.year_label,
+                    year: row.year,
+                    header_date_text: row.header_date_text,
+                    approximate_date: row.approximate_date,
+                    categories: row.categories,
+                    locations: row.locations
+                  }
+                });
+              }
+            });
+          }
+        }
+      } catch (err) {
+        console.warn("Error querying memory_timeline_events:", err);
       }
     }
 

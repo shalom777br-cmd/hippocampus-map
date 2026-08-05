@@ -980,6 +980,7 @@ export default function MindMap({ user, showToast }: MindMapProps) {
                 { id: "chatgpt_chat_history", label: "ChatGPT 会話", count: searchResults.filter(r => r.source === "chatgpt_chat_history").length },
                 { id: "joanna_value", label: "ジョアンナ価値観", count: searchResults.filter(r => r.source === "joanna_value").length },
                 { id: "hippocampus_logs", label: "タイムライン記憶", count: searchResults.filter(r => r.source === "hippocampus_logs").length },
+                { id: "memory_timeline_events", label: "DBイベント", count: searchResults.filter(r => r.source === "memory_timeline_events").length },
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -1048,6 +1049,8 @@ export default function MindMap({ user, showToast }: MindMapProps) {
                     sourceBadgeStyle = "bg-amber-100 text-amber-900 border-amber-200";
                   } else if (item.source === "hippocampus_logs") {
                     sourceBadgeStyle = "bg-sky-100 text-sky-800 border-sky-200";
+                  } else if (item.source === "memory_timeline_events") {
+                    sourceBadgeStyle = "bg-teal-100 text-teal-800 border-teal-200";
                   }
 
                   const formattedDate = item.occurred_at || item.created_at
